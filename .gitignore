@@ -1,0 +1,8 @@
+logs
+__pycache__
+.ipynb_checkpoints
+.*.swp
+
+build
+*.c
+pflow/utils/monotonic_align/*.pyd
