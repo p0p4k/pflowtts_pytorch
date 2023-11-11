@@ -24,6 +24,8 @@ class SinusoidalPosEmb(nn.Module):
         self.dim = dim
 
     def forward(self, x, scale=1000):
+        if x.ndim < 1:
+            x = x.unsqueeze(0)
         device = x.device
         half_dim = self.dim // 2
         emb = math.log(10000) / (half_dim - 1)
@@ -85,7 +87,7 @@ class DiffSingerNet(nn.Module):
         self.output_projection = Conv1d(residual_channels, in_dims, 1)
         nn.init.zeros_(self.output_projection.weight)
 
-    def forward(self, spec, spec_mask, mu, t, **kwargs):
+    def forward(self, spec, spec_mask, mu, t, *args, **kwargs):
         """
         :param spec: [B, M, T]
         :param t: [B, ]

@@ -69,7 +69,6 @@ class BASECFM(torch.nn.Module, ABC):
         # I am storing this because I can later plot it by putting a debugger here and saving it to a file
         # Or in future might add like a return_all_steps flag
         sol = []
-
         steps = 1
         while steps <= len(t_span) - 1:
             dphi_dt = self.estimator(x, mask, mu, t, cond, training=training)
@@ -111,7 +110,6 @@ class BASECFM(torch.nn.Module, ABC):
         y = (1 - (1 - self.sigma_min) * t) * z + t * x1
         u = x1 - (1 - self.sigma_min) * z
         # y = u * t + z
-        
         estimator_out = self.estimator(y, mask, mu, t.squeeze(), training=training)
 
         loss = F.mse_loss(estimator_out, u, reduction="sum") / (

@@ -17,7 +17,6 @@ While recent large-scale neural codec language models have shown significant imp
 1. Build Monotonic Alignment Search 
 ```sh
 # Cython-version Monotonoic Alignment Search
-
 python setup.py build_ext --inplace
 ```
 
@@ -110,9 +109,18 @@ y = torch.randn(4, 80, 500)
 y_lengths = torch.randint(300, 500, (4,))
 
 dur_loss, prior_loss, diff_loss = model(x, x_lengths, y, y_lengths)
-# backpropagate the loss
+# backpropagate the loss 
+
+# now synthesises
+x = torch.randint(0, 100, (1, 20))
+x_lengths = torch.randint(10, 20, (1,))
+y_slice = torch.randn(1, 80, 264)
+
+model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
 ```
 
 ## TODOs, features and update notes
 
-- [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick and less 'complex' architectures. I will add the original architectures soon.
+- [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
+- [x] (11/12/2023) Check out `notebooks` for a quick dry run and architecture testing of the model.
+- [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
