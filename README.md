@@ -118,9 +118,15 @@ y_slice = torch.randn(1, 80, 264)
 
 model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
 ```
+## Architecture details
+- [x] Speech prompted text encoder with Prenet and RoPE Transformer
+- [x] Duration predictor with MAS
+- [x] Flow matching generative decoder with CFM (paper uses wavenet decoder; we use modified wavenet and optional U-NET decoder is included to experiment with)
+- [x] Speech prompt input currently slices the input spectrogram and concatenates it with the text embedding. Can support external speech prompt input (during training as well)
+- [x] pflow prompt masking loss for training
+- [x] HiFiGan for vocoder
 
 ## TODOs, features and update notes
-
 - [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
 - [x] (11/12/2023) Check out `notebooks` for a quick dry run and architecture testing of the model.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
