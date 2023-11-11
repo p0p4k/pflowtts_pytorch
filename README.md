@@ -1,7 +1,7 @@
-### Work in progress; please check back when this message is removed.
+### Work in progress; Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
 
 ## P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting
-### Authors : Sungwon Kim1, Kevin J Shih1, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina,Mikyas Desta1, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
+### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina,Mikyas Desta1, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
 #### Affiliations: NVIDIA
 
 Unofficial implementation of the paper [P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting](https://openreview.net/pdf?id=zNA7u7wtIN) by NVIDIA.
