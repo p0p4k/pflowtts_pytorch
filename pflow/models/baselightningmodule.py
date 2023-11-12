@@ -57,11 +57,19 @@ class BaseLightningClass(LightningModule, ABC):
     def get_losses(self, batch):
         x, x_lengths = batch["x"], batch["x_lengths"]
         y, y_lengths = batch["y"], batch["y_lengths"]
+        prompt_spec = batch["prompt_spec"]
+        prompt_lengths = batch["prompt_lengths"]
+        prompt_slice, ids_slice = commons.rand_slice_segments(
+                        prompt_spec, 
+                        prompt_lengths, 
+                        self.prompt_size
+                    )
         dur_loss, prior_loss, diff_loss, = self(
             x=x,
             x_lengths=x_lengths,
             y=y,
             y_lengths=y_lengths,
+            prompt=prompt_slice,
         )
         return dict({
             "dur_loss": dur_loss,
@@ -183,10 +191,11 @@ class BaseLightningClass(LightningModule, ABC):
                 x_lengths = one_batch["x_lengths"][i].unsqueeze(0).to(self.device)
                 y = one_batch["y"][i].unsqueeze(0).to(self.device)
                 y_lengths = one_batch["y_lengths"][i].unsqueeze(0).to(self.device)
+                prompt = one_batch["prompt_spec"][i].unsqueeze(0).to(self.device)
+                prompt_lengths = one_batch["prompt_lengths"][i].unsqueeze(0).to(self.device)
                 prompt_slice, ids_slice = commons.rand_slice_segments(
-                        y, y_lengths, self.prompt_size
+                        prompt, prompt_lengths, self.prompt_size
                     )
-                # prompt_slice = y[:,:self.prompt_size]
                 output = self.synthesise(x[:, :x_lengths], x_lengths, prompt=prompt_slice, n_timesteps=10)
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]

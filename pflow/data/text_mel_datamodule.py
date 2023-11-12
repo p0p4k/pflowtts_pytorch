@@ -166,7 +166,8 @@ class TextMelDataset(torch.utils.data.Dataset):
 
         text = self.get_text(text, add_blank=self.add_blank)
         mel, audio = self.get_mel(filepath)
-
+        # TODO: make dictionary to get different spec for same speaker
+        # right now naively repeating target mel for testing purposes
         return {"x": text, "y": mel, "spk": spk, "wav":audio}
 
     def get_mel(self, filepath):
@@ -234,5 +235,15 @@ class TextMelBatchCollate:
         x_lengths = torch.tensor(x_lengths, dtype=torch.long)
         wav_lengths = torch.tensor(wav_lengths, dtype=torch.long)
         spks = torch.tensor(spks, dtype=torch.long) if self.n_spks > 1 else None
-
-        return {"x": x, "x_lengths": x_lengths, "y": y, "y_lengths": y_lengths, "spks": spks, "wav":wav, "wav_lengths":wav_lengths}
+        
+        return {
+            "x": x, 
+            "x_lengths": x_lengths, 
+            "y": y, 
+            "y_lengths": y_lengths, 
+            "spks": spks, 
+            "wav":wav, 
+            "wav_lengths":wav_lengths,
+            "prompt_spec": y,
+            "prompt_lengths": y_lengths,
+            }

@@ -10,6 +10,7 @@ import pflow.utils as utils
 from pflow.utils.model import sequence_mask
 from pflow.models.components import commons
 from pflow.models.components.vits_posterior import PosteriorEncoder
+from pflow.models.components.transformer import BasicTransformerBlock
 
 log = utils.get_pylogger(__name__)
 
@@ -92,6 +93,7 @@ class DurationPredictor(nn.Module):
         x = self.norm_2(x)
         x = self.drop(x)
         x = self.proj(x * x_mask)
+        # x = torch.relu(x)
         return x * x_mask
     
 class DurationPredictorNS2(nn.Module):
@@ -487,16 +489,17 @@ class TextEncoder(nn.Module):
 
         self.speech_in_channels = speech_in_channels
         self.speech_out_channels = self.n_channels
-        self.speech_prompt_proj = torch.nn.Conv1d(self.speech_in_channels, self.speech_out_channels, 1)
-        # self.speech_prompt_proj = PosteriorEncoder(
-        #     self.speech_in_channels,
-        #     self.speech_out_channels,
-        #     self.speech_out_channels,
-        #     1,
-        #     1,
-        #     1,
-        #     gin_channels=0,
-        # )
+        # self.speech_prompt_proj = torch.nn.Conv1d(self.speech_in_channels, self.speech_out_channels, 1)
+        self.speech_prompt_proj = PosteriorEncoder(
+            self.speech_in_channels,
+            self.speech_out_channels,
+            self.speech_out_channels,
+            1,
+            1,
+            1,
+            gin_channels=0,
+        )
+
         self.prenet = ConvReluNorm(
             self.n_channels,
             self.n_channels,
@@ -506,14 +509,14 @@ class TextEncoder(nn.Module):
             p_dropout=0,
         )
 
-        self.speech_prompt_encoder = Encoder(
-            encoder_params.n_channels,
-            encoder_params.filter_channels,
-            encoder_params.n_heads,
-            encoder_params.n_layers,
-            encoder_params.kernel_size,
-            encoder_params.p_dropout,
-        )
+        # self.speech_prompt_encoder = Encoder(
+        #     encoder_params.n_channels,
+        #     encoder_params.filter_channels,
+        #     encoder_params.n_heads,
+        #     encoder_params.n_layers,
+        #     encoder_params.kernel_size,
+        #     encoder_params.p_dropout,
+        # )
 
         self.text_base_encoder = Encoder(
             encoder_params.n_channels,
@@ -524,31 +527,30 @@ class TextEncoder(nn.Module):
             encoder_params.p_dropout,
         )
 
-        self.decoder = Decoder(
-            encoder_params.n_channels,
-            encoder_params.filter_channels,
-            encoder_params.n_heads,
-            encoder_params.n_layers,
-            encoder_params.kernel_size,
-            encoder_params.p_dropout,
-        )
-
-        # from pflow.models.components.transformer import BasicTransformerBlock
-        # self.transformerblock = BasicTransformerBlock(
+        # self.decoder = Decoder(
         #     encoder_params.n_channels,
+        #     encoder_params.filter_channels,
         #     encoder_params.n_heads,
-        #     encoder_params.n_channels // encoder_params.n_heads,
+        #     encoder_params.n_layers,
+        #     encoder_params.kernel_size,
         #     encoder_params.p_dropout,
-        #     encoder_params.n_channels,
-        #     activation_fn="gelu",
-        #     attention_bias=False,
-        #     only_cross_attention=False,
-        #     double_self_attention=False,
-        #     upcast_attention=False,
-        #     norm_elementwise_affine=True,
-        #     norm_type="layer_norm",
-        #     final_dropout=False,
         # )
+
+        self.transformerblock = BasicTransformerBlock(
+            encoder_params.n_channels,
+            encoder_params.n_heads,
+            encoder_params.n_channels // encoder_params.n_heads,
+            encoder_params.p_dropout,
+            encoder_params.n_channels,
+            activation_fn="gelu",
+            attention_bias=False,
+            only_cross_attention=False,
+            double_self_attention=False,
+            upcast_attention=False,
+            norm_elementwise_affine=True,
+            norm_type="layer_norm",
+            final_dropout=False,
+        )
         self.proj_m = torch.nn.Conv1d(self.n_channels, self.n_feats, 1)
 
         self.proj_w = DurationPredictor(
@@ -564,9 +566,6 @@ class TextEncoder(nn.Module):
         #     duration_predictor_params.p_dropout,
         # )
 
-        self.speech_prompt_pos_emb = RotaryPositionalEmbeddings(self.n_channels * 0.5)
-        self.text_pos_emb = RotaryPositionalEmbeddings(self.n_channels * 0.5)
-    
     def forward(
             self, 
             x_input, 
@@ -590,40 +589,30 @@ class TextEncoder(nn.Module):
             x_mask (torch.Tensor): mask for the text input
                 shape: (batch_size, 1, max_text_length)
         """
- 
         x_emb = self.emb(x_input) * math.sqrt(self.n_channels)
         x_emb = torch.transpose(x_emb, 1, -1)
-        
         x_speech_lengths = x_lengths + speech_prompt.size(2)
         speech_lengths = x_speech_lengths - x_lengths
-        speech_prompt_proj = self.speech_prompt_proj(speech_prompt)
-        # speech_prompt_proj, speech_mask = self.speech_prompt_proj(speech_prompt, speech_lengths)
-        x_prenet = torch.cat([speech_prompt_proj, x_emb], dim=2)
-        x_speech_mask = torch.unsqueeze(sequence_mask(x_speech_lengths, x_prenet.size(2)), 1).to(x_prenet.dtype)      
-        # x_split = x_emb
-        x = self.prenet(x_prenet, x_speech_mask)
-        # split speech prompt and text input
-        speech_prompt_proj = x[:, :, :speech_prompt_proj.size(2)]
-        x_split = x[:, :, speech_prompt_proj.size(2):]
+        # speech_prompt_proj = self.speech_prompt_proj(speech_prompt)
+        speech_prompt_proj, speech_mask = self.speech_prompt_proj(speech_prompt, speech_lengths)
+        x_speech_cat = torch.cat([speech_prompt_proj, x_emb], dim=2)
+        x_speech_mask = torch.unsqueeze(sequence_mask(x_speech_lengths, x_speech_cat.size(2)), 1).to(x_speech_cat.dtype)      
         
-        # add positional encoding to speech prompt and x_split
-        x_split = self.text_pos_emb(x_split.unsqueeze(1).transpose(-2,-1)).squeeze(1).transpose(-2,-1)
+        x_prenet = self.prenet(x_speech_cat, x_speech_mask)
+        # split speech prompt and text input
+        speech_split = x_prenet[:, :, :speech_prompt_proj.size(2)]
+        x_split = x_prenet[:, :, speech_prompt_proj.size(2):]
         x_split_mask = torch.unsqueeze(sequence_mask(x_lengths, x_split.size(2)), 1).to(x_split.dtype)      
         speech_lengths = x_speech_lengths - x_lengths
-        speech_mask = torch.unsqueeze(sequence_mask(speech_lengths, speech_prompt_proj.size(2)), 1).to(x_split.dtype)
-        speech_prompt = self.speech_prompt_encoder(speech_prompt_proj, speech_mask)
-        x_split = self.text_base_encoder(x_split, x_split_mask)
-        
-        speech_prompt = self.speech_prompt_pos_emb(speech_prompt.unsqueeze(1).transpose(-2,-1)).squeeze(1).transpose(-2,-1)
-        x_split = self.decoder(x_split, x_split_mask, speech_prompt, speech_mask)
+        speech_mask = torch.unsqueeze(sequence_mask(speech_lengths, speech_split.size(2)), 1).to(x_split.dtype)
 
-        # x_split = self.transformerblock(x_split.transpose(1,2), x_split_mask, speech_prompt.transpose(1,2), speech_mask)
-        # x_split = x_split.transpose(1,2)
+        x_split = self.transformerblock(x_split.transpose(1,2), x_split_mask, speech_split.transpose(1,2), speech_mask)
+        x_split = x_split.transpose(1,2)
         
         # x_split_mask = torch.unsqueeze(sequence_mask(x_lengths, x_split.size(2)), 1).to(x.dtype)
         
         mu = self.proj_m(x_split) * x_split_mask
-        
         x_dp = torch.detach(x_split)
         logw = self.proj_w(x_dp, x_split_mask)
+
         return mu, logw, x_split_mask
