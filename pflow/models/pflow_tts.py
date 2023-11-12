@@ -30,6 +30,7 @@ class pflowTTS(BaseLightningClass):  # 🍵
         prompt_size=264,
         optimizer=None,
         scheduler=None,
+        **kwargs
     ):
         super().__init__()
 

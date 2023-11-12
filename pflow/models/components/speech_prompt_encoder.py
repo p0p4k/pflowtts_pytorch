@@ -437,7 +437,7 @@ class TextEncoder(nn.Module):
             self.n_channels,
             kernel_size=5,
             n_layers=3,
-            p_dropout=0.5,
+            p_dropout=0,
         )
 
         self.encoder = Encoder(
@@ -449,7 +449,7 @@ class TextEncoder(nn.Module):
             encoder_params.p_dropout,
         )
 
-        self.Decoder = Decoder(
+        self.decoder = Decoder(
             encoder_params.n_channels,
             encoder_params.filter_channels,
             encoder_params.n_heads,
@@ -503,17 +503,14 @@ class TextEncoder(nn.Module):
         
         # split speech prompt and text input
         speech_prompt = x[:, :, :speech_prompt.size(2)]
-        x = x[:, :, speech_prompt.size(2):]
-        x_mask = torch.unsqueeze(sequence_mask(x_lengths, x.size(2)), 1).to(x.dtype)      
-        speech_mask = x_speech_lengths - x_lengths
-        speech_mask = torch.unsqueeze(sequence_mask(speech_mask, speech_prompt.size(2)), 1).to(x.dtype)
-        
-        x = self.encoder(x, x_mask)
-        x = self.Decoder(x, x_mask, speech_prompt, speech_mask)
-        
-        mu = self.proj_m(x) * x_mask
-        
-        x_dp = torch.detach(x)
-        logw = self.proj_w(x_dp, x_mask)
+        x_split = x[:, :, speech_prompt.size(2):]
+        x_split_mask = torch.unsqueeze(sequence_mask(x_lengths, x_split.size(2)), 1).to(x.dtype)      
+        speech_lengths = x_speech_lengths - x_lengths
+        speech_mask = torch.unsqueeze(sequence_mask(speech_lengths, speech_prompt.size(2)), 1).to(x.dtype)
+        speech_prompt = self.encoder(speech_prompt, speech_mask)
+        x_split = self.decoder(x_split, x_split_mask, speech_prompt, speech_mask)
+        mu = self.proj_m(x_split) * x_split_mask
+        x_dp = torch.detach(x_split)
+        logw = self.proj_w(x_dp, x_split_mask)
 
-        return mu, logw, x_mask
+        return mu, logw, x_split_mask

@@ -13,14 +13,22 @@ While recent large-scale neural codec language models have shown significant imp
 ## Credits
 - We will build this repo based on the [VITS2 repo](https://github.com/p0p4k/vits2_pytorch), [MATCHA-TTS repo](https://github.com/shivammehta25/Matcha-TTS/) and [VoiceFlow-TTS repo](https://github.com/cantabile-kwok/VoiceFlow-TTS)
 
-# How to run
+# Instructions to run
+0. Stay in the root directory
+``` sh
+cd pflowtts_pytorch
+```
 1. Build Monotonic Alignment Search 
 ```sh
 # Cython-version Monotonoic Alignment Search
 python setup.py build_ext --inplace
 ```
+2. How to train?
+```sh
+python pflow/train.py experiment=ljspeech trainer.devices=[1]
+```
 
-2. Dry run
+3. Dry run
 ``` python
 import sys
 sys.path.append('..')
@@ -129,4 +137,5 @@ model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
 ## TODOs, features and update notes
 - [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
 - [x] (11/12/2023) Check out `notebooks` for a quick dry run and architecture testing of the model.
+- [x] (11/12/2023) Training fails on my dataset at the moment, will debug and fix it soon. But the training the code runs error-free.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.

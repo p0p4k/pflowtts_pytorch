@@ -1,3 +1,5 @@
+import sys 
+sys.path.append('..')
 from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
@@ -6,8 +8,6 @@ import rootutils
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
-
-from pflow import utils
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -27,6 +27,8 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # more info: https://github.com/ashleve/rootutils
 # ------------------------------------------------------------------------------------ #
 
+
+from pflow import utils
 
 log = utils.get_pylogger(__name__)
 
