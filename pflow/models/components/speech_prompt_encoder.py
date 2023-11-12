@@ -9,6 +9,7 @@ from einops import rearrange
 import pflow.utils as utils
 from pflow.utils.model import sequence_mask
 from pflow.models.components import commons
+from pflow.models.components.vits_posterior import PosteriorEncoder
 
 log = utils.get_pylogger(__name__)
 
@@ -92,8 +93,65 @@ class DurationPredictor(nn.Module):
         x = self.drop(x)
         x = self.proj(x * x_mask)
         return x * x_mask
+    
+class DurationPredictorNS2(nn.Module):
+    def __init__(
+        self, in_channels, filter_channels, kernel_size, p_dropout=0.5
+    ):
+        super().__init__()
 
+        self.in_channels = in_channels
+        self.filter_channels = filter_channels
+        self.kernel_size = kernel_size
+        self.p_dropout = p_dropout
 
+        self.drop = nn.Dropout(p_dropout)
+        self.conv_1 = nn.Conv1d(
+            in_channels, filter_channels, kernel_size, padding=kernel_size // 2
+        )
+        self.norm_1 = LayerNorm(filter_channels)
+        
+        self.module_list = nn.ModuleList()
+        self.module_list.append(self.conv_1)
+        self.module_list.append(nn.ReLU())
+        self.module_list.append(self.norm_1)
+        self.module_list.append(self.drop)
+        
+        for i in range(12):
+            self.module_list.append(nn.Conv1d(filter_channels, filter_channels, kernel_size, padding=kernel_size // 2))
+            self.module_list.append(nn.ReLU())
+            self.module_list.append(LayerNorm(filter_channels))
+            self.module_list.append(nn.Dropout(p_dropout))
+            
+        
+        # attention layer every 3 layers
+        self.attn_list = nn.ModuleList()
+        for i in range(4):
+            self.attn_list.append(
+                Encoder(
+                    filter_channels,
+                    filter_channels,
+                    8,
+                    10,
+                    3,
+                    p_dropout=p_dropout,
+                )
+            )
+
+        for i in range(30):
+            if i+1 % 3 == 0:
+                self.module_list.append(self.attn_list[i//3])
+        
+        self.proj = nn.Conv1d(filter_channels, 1, 1)
+
+    def forward(self, x, x_mask):
+        x = torch.detach(x)
+        for layer in self.module_list:
+            x = layer(x * x_mask)
+        x = self.proj(x * x_mask)
+        # x = torch.relu(x)
+        return x * x_mask
+    
 class RotaryPositionalEmbeddings(nn.Module):
     """
     ## RoPE module
@@ -429,8 +487,16 @@ class TextEncoder(nn.Module):
 
         self.speech_in_channels = speech_in_channels
         self.speech_out_channels = self.n_channels
-        self.speech_prompt_proj = torch.nn.Conv1d(self.speech_in_channels, self.speech_out_channels, 1)
-        
+        # self.speech_prompt_proj = torch.nn.Conv1d(self.speech_in_channels, self.speech_out_channels, 1)
+        self.speech_prompt_proj = PosteriorEncoder(
+            self.speech_in_channels,
+            self.speech_out_channels,
+            self.speech_out_channels,
+            1,
+            1,
+            1,
+            gin_channels=0,
+        )
         self.prenet = ConvReluNorm(
             self.n_channels,
             self.n_channels,
@@ -458,18 +524,43 @@ class TextEncoder(nn.Module):
             encoder_params.p_dropout,
         )
 
+        # from pflow.models.components.transformer import BasicTransformerBlock
+        # self.transformerblock = BasicTransformerBlock(
+        #     encoder_params.n_channels,
+        #     encoder_params.n_heads,
+        #     encoder_params.n_channels // encoder_params.n_heads,
+        #     encoder_params.p_dropout,
+        #     encoder_params.n_channels,
+        #     activation_fn="gelu",
+        #     attention_bias=False,
+        #     only_cross_attention=False,
+        #     double_self_attention=False,
+        #     upcast_attention=False,
+        #     norm_elementwise_affine=True,
+        #     norm_type="layer_norm",
+        #     final_dropout=False,
+        # )
         self.proj_m = torch.nn.Conv1d(self.n_channels, self.n_feats, 1)
 
-        self.proj_w = DurationPredictor(
+        # self.proj_w = DurationPredictor(
+        #     self.n_channels,
+        #     duration_predictor_params.filter_channels_dp,
+        #     duration_predictor_params.kernel_size,
+        #     duration_predictor_params.p_dropout,
+        # )
+        self.proj_w = DurationPredictorNS2(
             self.n_channels,
             duration_predictor_params.filter_channels_dp,
             duration_predictor_params.kernel_size,
             duration_predictor_params.p_dropout,
         )
 
+        self.speech_prompt_pos_emb = RotaryPositionalEmbeddings(self.n_channels * 0.5)
+        self.text_pos_emb = RotaryPositionalEmbeddings(self.n_channels * 0.5)
+    
     def forward(
             self, 
-            x, 
+            x_input, 
             x_lengths, 
             speech_prompt,
             ):
@@ -490,27 +581,42 @@ class TextEncoder(nn.Module):
             x_mask (torch.Tensor): mask for the text input
                 shape: (batch_size, 1, max_text_length)
         """
-        x = self.emb(x) * math.sqrt(self.n_channels)
-        x = torch.transpose(x, 1, -1)
-
-        speech_prompt = self.speech_prompt_proj(speech_prompt)
-        x = torch.cat([speech_prompt, x], dim=2)
+ 
+        x_emb = self.emb(x_input) * math.sqrt(self.n_channels)
+        x_emb = torch.transpose(x_emb, 1, -1)
+        
         x_speech_lengths = x_lengths + speech_prompt.size(2)
-        
-        x_speech_mask = torch.unsqueeze(sequence_mask(x_speech_lengths, x.size(2)), 1).to(x.dtype)      
+        speech_lengths = x_speech_lengths - x_lengths
 
-        x = self.prenet(x, x_speech_mask)
-        
+        speech_prompt_proj, speech_mask = self.speech_prompt_proj(speech_prompt, speech_lengths)
+        x_prenet = torch.cat([speech_prompt_proj, x_emb], dim=2)
+        x_speech_mask = torch.unsqueeze(sequence_mask(x_speech_lengths, x_prenet.size(2)), 1).to(x_prenet.dtype)      
+
+        x = self.prenet(x_prenet, x_speech_mask)
         # split speech prompt and text input
-        speech_prompt = x[:, :, :speech_prompt.size(2)]
-        x_split = x[:, :, speech_prompt.size(2):]
+        speech_prompt_proj = x[:, :, :speech_prompt_proj.size(2)]
+        x_split = x[:, :, speech_prompt_proj.size(2):]
+        # add positional encoding to speech prompt and x_split
+        
+        speech_prompt = self.speech_prompt_pos_emb(speech_prompt_proj.unsqueeze(1).transpose(-2,-1)).squeeze(1).transpose(-2,-1)
+        x_split = self.text_pos_emb(x_split.unsqueeze(1).transpose(-2,-1)).squeeze(1).transpose(-2,-1)
         x_split_mask = torch.unsqueeze(sequence_mask(x_lengths, x_split.size(2)), 1).to(x.dtype)      
         speech_lengths = x_speech_lengths - x_lengths
         speech_mask = torch.unsqueeze(sequence_mask(speech_lengths, speech_prompt.size(2)), 1).to(x.dtype)
         speech_prompt = self.encoder(speech_prompt, speech_mask)
         x_split = self.decoder(x_split, x_split_mask, speech_prompt, speech_mask)
+        
+        # x_split = self.transformerblock(x_split.transpose(1,2), x_split_mask, speech_prompt.transpose(1,2), speech_mask)
+        # x_split = x_split.transpose(1,2)
+        # x = torch.cat([speech_prompt, x_split], dim=2)
+        # x = self.encoder(x, x_speech_mask)        
+        # x_split = x[:, :, speech_prompt.size(2):]
+        
+        # x_split_mask = torch.unsqueeze(sequence_mask(x_lengths, x_split.size(2)), 1).to(x.dtype)
+        
         mu = self.proj_m(x_split) * x_split_mask
-        x_dp = torch.detach(x_split)
-        logw = self.proj_w(x_dp, x_split_mask)
-
+        
+        x_dp = torch.detach(x_prenet)
+        logw = self.proj_w(x_dp, x_speech_mask)
+        logw = logw[:, :, speech_prompt.size(2):]
         return mu, logw, x_split_mask

@@ -30,7 +30,7 @@ class pflowTTS(BaseLightningClass):  # 🍵
         prompt_size=264,
         optimizer=None,
         scheduler=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__()
 
@@ -65,7 +65,6 @@ class pflowTTS(BaseLightningClass):  # 🍵
         assert prompt is not None, "Prompt must be provided for synthesis"
         # Get encoder_outputs `mu_x` and log-scaled token durations `logw`
         mu_x, logw, x_mask = self.encoder(x, x_lengths, prompt)
-
         w = torch.exp(logw) * x_mask
         w_ceil = torch.ceil(w) * length_scale
         y_lengths = torch.clamp_min(torch.sum(w_ceil, [1, 2]), 1).long()
@@ -99,7 +98,6 @@ class pflowTTS(BaseLightningClass):  # 🍵
         }
 
     def forward(self, x, x_lengths, y, y_lengths, prompt=None, cond=None, **kwargs):
-
         if prompt is None:
             prompt_slice, ids_slice = commons.rand_slice_segments(
                         y, y_lengths, self.prompt_size
@@ -122,6 +120,7 @@ class pflowTTS(BaseLightningClass):  # 🍵
                 -0.5 * (mu_x**2) * s_p_sq_r, [1], keepdim=True
             )  
             neg_cent = neg_cent1 + neg_cent2 + neg_cent3 + neg_cent4
+            
             attn_mask = torch.unsqueeze(x_mask, 2) * torch.unsqueeze(y_mask, -1)
             from pflow.utils.monotonic_align import maximum_path
             attn = (
@@ -135,13 +134,14 @@ class pflowTTS(BaseLightningClass):  # 🍵
         # Align encoded text with mel-spectrogram and get mu_y segment
         mu_y = torch.matmul(attn.squeeze(1).transpose(1, 2), mu_x.transpose(1, 2))
         mu_y = mu_y.transpose(1, 2)
-
+        
+        y_loss_mask = sequence_mask(y_lengths, y_max_length).unsqueeze(1).to(x_mask)
         for i in range(y.size(0)):  
-            y_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
+            y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
         # Compute loss of the decoder
-        diff_loss, _ = self.decoder.compute_loss(x1=y.detach(), mask=y_mask, mu=mu_y, cond=cond)
-
-        prior_loss = torch.sum(0.5 * ((y - mu_y) ** 2 + math.log(2 * math.pi)) * y_mask)
-        prior_loss = prior_loss / (torch.sum(y_mask) * self.n_feats)
+        diff_loss, _ = self.decoder.compute_loss(x1=y.detach(), mask=y_mask, mu=mu_y, cond=cond, loss_mask=y_loss_mask)
+        
+        prior_loss = torch.sum(0.5 * ((y - mu_y) ** 2 + math.log(2 * math.pi)) * y_loss_mask)
+        prior_loss = prior_loss / (torch.sum(y_loss_mask) * self.n_feats)
 
         return dur_loss, prior_loss, diff_loss

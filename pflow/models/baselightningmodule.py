@@ -186,6 +186,7 @@ class BaseLightningClass(LightningModule, ABC):
                 prompt_slice, ids_slice = commons.rand_slice_segments(
                         y, y_lengths, self.prompt_size
                     )
+                # prompt_slice = y[:,:self.prompt_size]
                 output = self.synthesise(x[:, :x_lengths], x_lengths, prompt=prompt_slice, n_timesteps=10)
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]

@@ -5,6 +5,8 @@ import torch.nn.functional as F
 
 from pflow.models.components.decoder import Decoder
 from pflow.models.components.wn_pflow_decoder import DiffSingerNet
+from pflow.models.components.vits_wn_decoder import VitsWNDecoder
+
 from pflow.utils.pylogger import get_pylogger
 
 log = get_pylogger(__name__)
@@ -126,6 +128,15 @@ class CFM(BASECFM):
         )
 
         # Just change the architecture of the estimator here
-        # self.estimator = Decoder(in_channels=in_channels, out_channels=out_channel, **decoder_params)
+        # self.estimator = Decoder(in_channels=in_channels*2, out_channels=out_channel, **decoder_params)
         self.estimator = DiffSingerNet(in_dims=in_channels, encoder_hidden=out_channel)
+        # self.estimator = VitsWNDecoder(
+        #     in_channels=in_channels,
+        #     out_channels=out_channel,
+        #     hidden_channels=out_channel,
+        #     kernel_size=3,
+        #     dilation_rate=1,
+        #     n_layers=10,
+        #     gin_channels=out_channel*2
+        # )
         
