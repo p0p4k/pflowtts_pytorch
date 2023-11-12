@@ -16,6 +16,8 @@ from pflow.utils.model import (
     sequence_mask,
 )
 from pflow.models.components import commons
+from pflow.models.components.aligner import Aligner, ForwardSumLoss, BinLoss
+
 log = utils.get_pylogger(__name__)
 
 class pflowTTS(BaseLightningClass):  # 🍵
@@ -49,12 +51,23 @@ class pflowTTS(BaseLightningClass):  # 🍵
             speech_in_channels,
         )
 
+        self.aligner = Aligner(
+            dim_in=encoder.encoder_params.n_feats,
+            dim_hidden=encoder.encoder_params.n_feats,
+            attn_channels=encoder.encoder_params.n_feats,
+            )
+        
+        self.aligner_loss = ForwardSumLoss()
+        self.bin_loss = BinLoss()
+        self.aligner_bin_loss_weight = 0
+
         self.decoder = CFM(
             in_channels=encoder.encoder_params.n_feats,
             out_channel=encoder.encoder_params.n_feats,
             cfm_params=cfm,
             decoder_params=decoder,
         )
+        
         self.update_data_statistics(data_statistics)
 
     @torch.inference_mode()
@@ -102,42 +115,54 @@ class pflowTTS(BaseLightningClass):  # 🍵
             prompt_slice, ids_slice = commons.rand_slice_segments(
                         y, y_lengths, self.prompt_size
                     )
-        mu_x, logw, x_mask = self.encoder(x, x_lengths,prompt_slice)
+        mu_x, logw, x_mask = self.encoder(x, x_lengths, prompt_slice)
+        
         y_max_length = y.shape[-1]
         
         y_mask = sequence_mask(y_lengths, y_max_length).unsqueeze(1).to(x_mask)
         attn_mask = x_mask.unsqueeze(-1) * y_mask.unsqueeze(2)
 
-        with torch.no_grad():
-        # negative cross-entropy
-            s_p_sq_r = torch.ones_like(mu_x) # [b, d, t]
-            neg_cent1 = torch.sum(
-                -0.5 * math.log(2 * math.pi)- torch.zeros_like(mu_x), [1], keepdim=True
-            )
-            neg_cent2 = torch.einsum("bdt, bds -> bts", -0.5 * (y**2), s_p_sq_r)
-            neg_cent3 = torch.einsum("bdt, bds -> bts", y, (mu_x * s_p_sq_r))
-            neg_cent4 = torch.sum(
-                -0.5 * (mu_x**2) * s_p_sq_r, [1], keepdim=True
-            )  
-            neg_cent = neg_cent1 + neg_cent2 + neg_cent3 + neg_cent4
+        # with torch.no_grad():
+        # # negative cross-entropy
+        #     s_p_sq_r = torch.ones_like(mu_x) # [b, d, t]
+        #     neg_cent1 = torch.sum(
+        #         -0.5 * math.log(2 * math.pi)- torch.zeros_like(mu_x), [1], keepdim=True
+        #     )
+        #     neg_cent2 = torch.einsum("bdt, bds -> bts", -0.5 * (y**2), s_p_sq_r)
+        #     neg_cent3 = torch.einsum("bdt, bds -> bts", y, (mu_x * s_p_sq_r))
+        #     neg_cent4 = torch.sum(
+        #         -0.5 * (mu_x**2) * s_p_sq_r, [1], keepdim=True
+        #     )  
+        #     neg_cent = neg_cent1 + neg_cent2 + neg_cent3 + neg_cent4
             
-            attn_mask = torch.unsqueeze(x_mask, 2) * torch.unsqueeze(y_mask, -1)
-            from pflow.utils.monotonic_align import maximum_path
-            attn = (
-                maximum_path(neg_cent, attn_mask.squeeze(1)).unsqueeze(1).detach()
+        #     attn_mask = torch.unsqueeze(x_mask, 2) * torch.unsqueeze(y_mask, -1)
+        #     from pflow.utils.monotonic_align import maximum_path
+        #     attn = (
+        #         maximum_path(neg_cent, attn_mask.squeeze(1)).unsqueeze(1).detach()
+        #     )
+
+        aln_hard, aln_soft, aln_log, aln_mask = self.aligner(
+            mu_x.transpose(1,2), x_mask, y, y_mask
             )
+        attn = aln_mask.transpose(1,2).unsqueeze(1)
+
+        align_loss = self.aligner_loss(aln_log, x_lengths, y_lengths)
+        if self.aligner_bin_loss_weight > 0.:
+            align_bin_loss = self.bin_loss(aln_mask, aln_log, x_lengths) * self.aligner_bin_loss_weight
+            align_loss = align_loss + align_bin_loss
 
         logw_ = torch.log(1e-8 + attn.sum(2)) * x_mask
         dur_loss = duration_loss(logw, logw_, x_lengths)
-        attn = attn.squeeze(1).transpose(1,2)       
-
+        dur_loss = dur_loss + align_loss
+        attn = attn.squeeze(1).transpose(1,2)
+               
         # Align encoded text with mel-spectrogram and get mu_y segment
         mu_y = torch.matmul(attn.squeeze(1).transpose(1, 2), mu_x.transpose(1, 2))
         mu_y = mu_y.transpose(1, 2)
-        
+
         y_loss_mask = sequence_mask(y_lengths, y_max_length).unsqueeze(1).to(x_mask)
-        for i in range(y.size(0)):  
-            y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
+        # for i in range(y.size(0)):  
+        #     y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
         # Compute loss of the decoder
         diff_loss, _ = self.decoder.compute_loss(x1=y.detach(), mask=y_mask, mu=mu_y, cond=cond, loss_mask=y_loss_mask)
         
