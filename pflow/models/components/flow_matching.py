@@ -84,7 +84,7 @@ class BASECFM(torch.nn.Module, ABC):
 
         return sol[-1]
 
-    def compute_loss(self, x1, mask, mu, cond=None, training=True):
+    def compute_loss(self, x1, mask, mu, cond=None, training=True, loss_mask=None):
         """Computes diffusion loss
 
         Args:
@@ -114,6 +114,8 @@ class BASECFM(torch.nn.Module, ABC):
         # y = u * t + z
         estimator_out = self.estimator(y, mask, mu, t.squeeze(), training=training)
 
+        if loss_mask is not None:
+            mask = loss_mask
         loss = F.mse_loss(estimator_out, u, reduction="sum") / (
             torch.sum(mask) * u.shape[1]
         )

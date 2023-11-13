@@ -137,6 +137,11 @@ model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
 ## TODOs, features and update notes
 - [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
 - [x] (11/12/2023) Check out `notebooks` for a quick dry run and architecture testing of the model.
-- [x] (11/12/2023) Training fails on my dataset at the moment, will debug and fix it soon. But the training the code runs error-free.
+- [x] ~(11/12/2023) Training fails on my dataset at the moment, will debug and fix it soon. But the training the code runs error-free.~
+- [x] (11/13/2023) 
+    - fixed big mistake in monotonic align build
+    - lot of combinations possible within model
+    - architecture big picture is same like paper, but internals are different
+    - if model doesnt converge, will eventually settle to paper's exact architecture
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
 
