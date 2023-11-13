@@ -194,9 +194,11 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - lot of combinations possible within model
     - architecture big picture is same like paper, but internals are different
     - if model doesnt converge, will eventually settle to paper's exact architecture
-[x] (11/13/2023) Tensorboard screenshot
+- [x] (11/13/2023) Tensorboard screenshot
     ![Alt text](init_tensorboard_11_13_23.png)
-[x] (11/13/2023)
+- [x] (11/13/2023)
     - added installation instructions
+- [x] (11/13/2023)
+    - looks like the model is learning and is on the right track. 
+    ![Alt text](image.png)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
-
