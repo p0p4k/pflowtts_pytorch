@@ -1,5 +1,3 @@
-### Work in progress; Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
-
 ## P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting
 ### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina,Mikyas Desta1, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
 #### Affiliations: NVIDIA
@@ -13,22 +11,10 @@ While recent large-scale neural codec language models have shown significant imp
 ## Credits
 - We will build this repo based on the [VITS2 repo](https://github.com/p0p4k/vits2_pytorch), [MATCHA-TTS repo](https://github.com/shivammehta25/Matcha-TTS/) and [VoiceFlow-TTS repo](https://github.com/cantabile-kwok/VoiceFlow-TTS)
 
-# Instructions to run
-0. Stay in the root directory
+# Dry run
 ``` sh
-cd pflowtts_pytorch
+cd pflowtts_pytorch/notebooks
 ```
-1. Build Monotonic Alignment Search 
-```sh
-# Cython-version Monotonoic Alignment Search
-python setup.py build_ext --inplace
-```
-2. How to train?
-```sh
-python pflow/train.py experiment=ljspeech trainer.devices=[1]
-```
-
-3. Dry run
 ``` python
 import sys
 sys.path.append('..')
@@ -126,6 +112,71 @@ y_slice = torch.randn(1, 80, 264)
 
 model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
 ```
+
+# Instructions to run
+0. Create an environment (suggested but optional)
+``` sh
+conda create -n pflowtts python=3.10 -y
+conda activate pflowtts
+```
+
+Stay in the root directory (of course clone the repo first!)
+``` sh
+cd pflowtts_pytorch
+pip install -r requirements.txt
+```
+
+1. Build Monotonic Alignment Search 
+```sh
+# Cython-version Monotonoic Alignment Search
+python setup.py build_ext --inplace
+```
+
+Let's assume we are training with LJ Speech
+
+2. Download the dataset from [here](https://keithito.com/LJ-Speech-Dataset/), extract it to `data/LJSpeech-1.1`, and prepare the file lists to point to the extracted data like for [item 5 in the setup of the NVIDIA Tacotron 2 repo](https://github.com/NVIDIA/tacotron2#setup).
+
+3. Go to `configs/data/ljspeech.yaml` and change
+```yaml
+train_filelist_path: data/filelists/ljs_audio_text_train_filelist.txt
+valid_filelist_path: data/filelists/ljs_audio_text_val_filelist.txt
+```
+4. Generate normalisation statistics with the yaml file of dataset configuration
+
+```bash
+cd pflowtts_pytorch/pflow/utils
+python generate_data_statistics.py -i ljspeech.yaml
+# Output:
+#{'mel_mean': -5.53662231756592, 'mel_std': 2.1161014277038574}
+```
+
+Update these values in `configs/data/ljspeech.yaml` under `data_statistics` key.
+
+```bash
+data_statistics:  # Computed for ljspeech dataset
+  mel_mean: -5.536622
+  mel_std: 2.116101
+```
+to the paths of your train and validation filelists.
+
+5. Run the training script
+
+```bash
+make train-ljspeech
+```
+
+or
+
+```bash
+python pflow/train.py experiment=ljspeech
+```
+
+- for multi-gpu training, run
+
+```bash
+python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
+```
+
 ## Architecture details
 - [x] Speech prompted text encoder with Prenet and RoPE Transformer
 - [x] Duration predictor with MAS
@@ -145,5 +196,7 @@ model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
     - if model doesnt converge, will eventually settle to paper's exact architecture
 [x] (11/13/2023) Tensorboard screenshot
     ![Alt text](init_tensorboard_11_13_23.png)
+[x] (11/13/2023)
+    - added installation instructions
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
 
