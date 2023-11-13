@@ -116,7 +116,7 @@ x_lengths = torch.randint(10, 20, (4,))
 y = torch.randn(4, 80, 500)
 y_lengths = torch.randint(300, 500, (4,))
 
-dur_loss, prior_loss, diff_loss = model(x, x_lengths, y, y_lengths)
+dur_loss, prior_loss, diff_los, attn = model(x, x_lengths, y, y_lengths)
 # backpropagate the loss 
 
 # now synthesises
@@ -143,5 +143,7 @@ model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
     - lot of combinations possible within model
     - architecture big picture is same like paper, but internals are different
     - if model doesnt converge, will eventually settle to paper's exact architecture
+[x] (11/13/2023) Tensorboard screenshot
+    ![Alt text](init_tensorboard_11_13_23.png)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
 
