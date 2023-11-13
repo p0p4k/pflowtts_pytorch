@@ -4,7 +4,6 @@ defaults:
   - decoder: default.yaml
   - cfm: default.yaml
   - optimizer: adam.yaml
-  - scheduler: default.yaml
 
 _target_: pflow.models.pflow_tts.pflowTTS
 n_vocab: 178
