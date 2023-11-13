@@ -41,14 +41,19 @@ class BaseLightningClass(LightningModule, ABC):
 
             scheduler_args.update({"optimizer": optimizer})
             scheduler = self.hparams.scheduler.scheduler(**scheduler_args)
-            scheduler.last_epoch = current_epoch
+            print(self.ckpt_loaded_epoch - 1)
+            if hasattr(self, "ckpt_loaded_epoch"):
+                scheduler.last_epoch = self.ckpt_loaded_epoch - 1
+            else:
+                scheduler.last_epoch = -1
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    "interval": self.hparams.scheduler.lightning_args.interval,
-                    "frequency": self.hparams.scheduler.lightning_args.frequency,
-                    "name": "learning_rate",
+                    # "interval": self.hparams.scheduler.lightning_args.interval,
+                    # "frequency": self.hparams.scheduler.lightning_args.frequency,
+                    # "name": "learning_rate",
+                    "monitor": "val_loss",
                 },
             }
 
@@ -209,8 +214,10 @@ class BaseLightningClass(LightningModule, ABC):
                 x_lengths = one_batch["x_lengths"][i].unsqueeze(0).to(self.device)
                 y = one_batch["y"][i].unsqueeze(0).to(self.device)
                 y_lengths = one_batch["y_lengths"][i].unsqueeze(0).to(self.device)
-                prompt = one_batch["prompt_spec"][i].unsqueeze(0).to(self.device)
-                prompt_lengths = one_batch["prompt_lengths"][i].unsqueeze(0).to(self.device)
+                # prompt = one_batch["prompt_spec"][i].unsqueeze(0).to(self.device)
+                # prompt_lengths = one_batch["prompt_lengths"][i].unsqueeze(0).to(self.device)
+                prompt = y
+                prompt_lengths = y_lengths
                 prompt_slice, ids_slice = commons.rand_slice_segments(
                         prompt, prompt_lengths, self.prompt_size
                     )
