@@ -21,7 +21,7 @@ from pflow.models.components.aligner import Aligner, ForwardSumLoss, BinLoss
 
 log = utils.get_pylogger(__name__)
 
-class pflowTTS(BaseLightningClass):  # 🍵
+class pflowTTS(BaseLightningClass):  # 
     def __init__(
         self,
         n_vocab,
