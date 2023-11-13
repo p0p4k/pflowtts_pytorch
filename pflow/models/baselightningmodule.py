@@ -57,32 +57,37 @@ class BaseLightningClass(LightningModule, ABC):
     def get_losses(self, batch):
         x, x_lengths = batch["x"], batch["x_lengths"]
         y, y_lengths = batch["y"], batch["y_lengths"]
-        prompt_spec = batch["prompt_spec"]
-        prompt_lengths = batch["prompt_lengths"]
-        prompt_slice, ids_slice = commons.rand_slice_segments(
-                        prompt_spec, 
-                        prompt_lengths, 
-                        self.prompt_size
-                    )
-        dur_loss, prior_loss, diff_loss, = self(
+        # prompt_spec = batch["prompt_spec"]
+        # prompt_lengths = batch["prompt_lengths"]
+        # prompt_slice, ids_slice = commons.rand_slice_segments(
+        #                 prompt_spec, 
+        #                 prompt_lengths, 
+        #                 self.prompt_size
+        #             )
+        prompt_slice = None
+        dur_loss, prior_loss, diff_loss, attn = self(
             x=x,
             x_lengths=x_lengths,
             y=y,
             y_lengths=y_lengths,
             prompt=prompt_slice,
         )
-        return dict({
+        return ({
             "dur_loss": dur_loss,
             "prior_loss": prior_loss,
             "diff_loss": diff_loss,
-            })
+            },
+            {
+            "attn": attn
+            }
+            )
 
     def on_load_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
         self.ckpt_loaded_epoch = checkpoint["epoch"]  # pylint: disable=attribute-defined-outside-init
 
     def training_step(self, batch: Any, batch_idx: int):
-        loss_dict = self.get_losses(batch)
-        loss_dict
+        loss_dict, attn_dict = self.get_losses(batch)
+
         self.log(
             "step",
             float(self.global_step),
@@ -127,11 +132,17 @@ class BaseLightningClass(LightningModule, ABC):
             prog_bar=True,
             sync_dist=True,
         )
-    
+        attn = attn_dict["attn"][0]
+        self.logger.experiment.add_image(
+                    f"train/alignment",
+                    plot_tensor(attn.cpu()),
+                    self.current_epoch,
+                    dataformats="HWC",
+                )
         return {"loss": total_loss, "log": loss_dict}
 
     def validation_step(self, batch: Any, batch_idx: int):
-        loss_dict = self.get_losses(batch)
+        loss_dict, attn_dict = self.get_losses(batch)
         self.log(
             "sub_loss/val_dur_loss",
             loss_dict["dur_loss"],
@@ -168,6 +179,13 @@ class BaseLightningClass(LightningModule, ABC):
             sync_dist=True,
         )
 
+        attn = attn_dict["attn"][0]
+        self.logger.experiment.add_image(
+                    f"val/alignment",
+                    plot_tensor(attn.cpu()),
+                    self.current_epoch,
+                    dataformats="HWC",
+                )
         return total_loss
 
     def on_validation_end(self) -> None:

@@ -52,15 +52,15 @@ class pflowTTS(BaseLightningClass):  # 🍵
             speech_in_channels,
         )
 
-        self.aligner = Aligner(
-            dim_in=encoder.encoder_params.n_feats,
-            dim_hidden=encoder.encoder_params.n_feats,
-            attn_channels=encoder.encoder_params.n_feats,
-            )
+        # self.aligner = Aligner(
+        #     dim_in=encoder.encoder_params.n_feats,
+        #     dim_hidden=encoder.encoder_params.n_feats,
+        #     attn_channels=encoder.encoder_params.n_feats,
+        #     )
         
-        self.aligner_loss = ForwardSumLoss()
-        self.bin_loss = BinLoss()
-        self.aligner_bin_loss_weight = 0.0
+        # self.aligner_loss = ForwardSumLoss()
+        # self.bin_loss = BinLoss()
+        # self.aligner_bin_loss_weight = 0.0
 
         self.decoder = CFM(
             in_channels=encoder.encoder_params.n_feats,
@@ -130,9 +130,13 @@ class pflowTTS(BaseLightningClass):  # 🍵
         with torch.no_grad():
         # negative cross-entropy
             s_p_sq_r = torch.ones_like(mu_x) # [b, d, t]
+            # s_p_sq_r = torch.exp(-2 * logx) 
             neg_cent1 = torch.sum(
                 -0.5 * math.log(2 * math.pi)- torch.zeros_like(mu_x), [1], keepdim=True
             )
+            # neg_cent1 = torch.sum(
+            #     -0.5 * math.log(2 * math.pi) - logx, [1], keepdim=True
+            #     ) # [b, 1, t_s]
             neg_cent2 = torch.einsum("bdt, bds -> bts", -0.5 * (y**2), s_p_sq_r)
             neg_cent3 = torch.einsum("bdt, bds -> bts", y, (mu_x * s_p_sq_r))
             neg_cent4 = torch.sum(
@@ -173,6 +177,6 @@ class pflowTTS(BaseLightningClass):  # 🍵
         diff_loss, _ = self.decoder.compute_loss(x1=y.detach(), mask=y_mask, mu=mu_y, cond=cond, loss_mask=y_loss_mask)
         
         prior_loss = torch.sum(0.5 * ((y - mu_y) ** 2 + math.log(2 * math.pi)) * y_loss_mask)
-        prior_loss = prior_loss * 45 / (torch.sum(y_loss_mask) * self.n_feats)
+        prior_loss = prior_loss / (torch.sum(y_loss_mask) * self.n_feats)
 
-        return dur_loss, prior_loss, diff_loss
+        return dur_loss, prior_loss, diff_loss, attn
