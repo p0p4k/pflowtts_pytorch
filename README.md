@@ -112,6 +112,8 @@ y_slice = torch.randn(1, 80, 264)
 
 model.synthesise(x, x_lengths, y_slice, n_timesteps=10)
 ```
+# Quick run in Google Colab
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1tyWDhqfP8ff5O4YcSv9S7TgSpiEyzIvz?usp=sharing)
 
 # Instructions to run
 0. Create an environment (suggested but optional)
@@ -203,4 +205,6 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     ![Alt text](val_out_tboard.png)
 - [x] (11/14/2023)
     ![Alt text](20k_tboard.png)
+- [x] (11/14/2023)
+    - added Google Colab notebook for quick run
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
