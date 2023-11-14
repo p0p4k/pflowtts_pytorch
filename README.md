@@ -200,5 +200,5 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - added installation instructions
 - [x] (11/13/2023)
     - looks like the model is learning and is on the right track. 
-    ![Alt text](epoch_1_training.png)
+    ![Alt text](val_out_tboard.png)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
