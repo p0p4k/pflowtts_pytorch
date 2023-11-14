@@ -4,9 +4,13 @@ when needed.
 
 Parameters from hparam.py will be used
 """
+import os
+
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 

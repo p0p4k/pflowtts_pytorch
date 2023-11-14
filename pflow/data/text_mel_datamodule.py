@@ -210,8 +210,8 @@ class TextMelBatchCollate:
         B = len(batch)
         y_max_length = max([item["y"].shape[-1] for item in batch])
         y_max_length = fix_len_compatibility(y_max_length)
+        wav_max_length = y_max_length * 256
         x_max_length = max([item["x"].shape[-1] for item in batch])
-        wav_max_length = y_max_length * 256 #hoplength times mel frame numbers = wav size TODO remove hard code
         n_feats = batch[0]["y"].shape[-2]
 
         y = torch.zeros((B, n_feats, y_max_length), dtype=torch.float32)
@@ -222,7 +222,7 @@ class TextMelBatchCollate:
         spks = []
         for i, item in enumerate(batch):
             y_, x_ = item["y"], item["x"]
-            wav_ = item["wav"]
+            wav_ = item["wav"][:,:wav_max_length] if item["wav"].shape[-1] > wav_max_length else item["wav"]
             y_lengths.append(y_.shape[-1])
             x_lengths.append(x_.shape[-1])
             wav_lengths.append(wav_.shape[-1])
