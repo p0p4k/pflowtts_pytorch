@@ -156,8 +156,8 @@ class WN(torch.nn.Module):
     def forward(self, x, x_mask, g=None, **kwargs):
         output = torch.zeros_like(x)
         n_channels_tensor = torch.IntTensor([self.hidden_channels])
-
         if g is not None:
+            g = g.unsqueeze(-1)
             g = self.cond_layer(g)
 
         for i in range(self.n_layers):
