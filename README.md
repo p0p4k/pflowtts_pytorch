@@ -2,6 +2,8 @@
 ### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina,Mikyas Desta1, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
 #### Affiliations: NVIDIA
 
+## Status : Generated first sample (Check LJSpeech_Sample_100_epochs.wav) on 11/16/2023. 
+
 Unofficial implementation of the paper [P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting](https://openreview.net/pdf?id=zNA7u7wtIN) by NVIDIA.
 
 ![P-Flow](architecture.jpg)
@@ -9,6 +11,7 @@ Unofficial implementation of the paper [P-Flow: A Fast and Data-Efficient Zero-S
 While recent large-scale neural codec language models have shown significant improvement in zero-shot TTS by training on thousands of hours of data, they suffer from drawbacks such as a lack of robustness, slow sampling speed similar to previous autoregressive TTS methods, and reliance on pre-trained neural codec representations. Our work proposes P-Flow, a fast and data-efficient zero-shot TTS model that uses speech prompts for speaker adaptation. P-Flow comprises a speechprompted text encoder for speaker adaptation and a flow matching generative decoder for high-quality and fast speech synthesis. Our speech-prompted text encoder uses speech prompts and text input to generate speaker-conditional text representation. The flow matching generative decoder uses the speaker-conditional output to synthesize high-quality personalized speech significantly faster than in real-time. Unlike the neural codec language models, we specifically train P-Flow on LibriTTS dataset using a continuous mel-representation. Through our training method using continuous speech prompts, P-Flow matches the speaker similarity performance of the large-scale zero-shot TTS models with two orders of magnitude less training data and has more than 20× faster sampling speed. Our results show that P-Flow has better pronunciation and is preferred in human likeness and speaker similarity to its recent state-of-the-art counterparts, thus defining P-Flow as an attractive and desirable alternative.
 
 ## Credits
+- Of course the kind author of the paper for taking some time to explain me some details of the paper that I didn't understand at first. 
 - We will build this repo based on the [VITS2 repo](https://github.com/p0p4k/vits2_pytorch), [MATCHA-TTS repo](https://github.com/shivammehta25/Matcha-TTS/) and [VoiceFlow-TTS repo](https://github.com/cantabile-kwok/VoiceFlow-TTS)
 
 # Dry run
@@ -207,4 +210,8 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     ![Alt text](20k_tboard.png)
 - [x] (11/14/2023)
     - added Google Colab notebook for quick run
+- [x] (11/16/2023)
+    - added sample audio
+    - some architecture changes
+    - we know the model learns, now we need to try multispeaker and check for prosody.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
