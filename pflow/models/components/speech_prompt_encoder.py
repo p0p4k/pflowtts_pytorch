@@ -489,16 +489,16 @@ class TextEncoder(nn.Module):
 
         self.speech_in_channels = speech_in_channels
         self.speech_out_channels = self.n_channels
-        # self.speech_prompt_proj = torch.nn.Conv1d(self.speech_in_channels, self.speech_out_channels, 1)
-        self.speech_prompt_proj = PosteriorEncoder(
-            self.speech_in_channels,
-            self.speech_out_channels,
-            self.speech_out_channels,
-            1,
-            1,
-            1,
-            gin_channels=0,
-        )
+        self.speech_prompt_proj = torch.nn.Conv1d(self.speech_in_channels, self.speech_out_channels, 1)
+        # self.speech_prompt_proj = PosteriorEncoder(
+        #     self.speech_in_channels,
+        #     self.speech_out_channels,
+        #     self.speech_out_channels,
+        #     1,
+        #     1,
+        #     1,
+        #     gin_channels=0,
+        # )
 
         self.prenet = ConvReluNorm(
             self.n_channels,
@@ -600,8 +600,10 @@ class TextEncoder(nn.Module):
 
         x_speech_lengths = x_lengths + speech_prompt.size(2)
         speech_lengths = x_speech_lengths - x_lengths
-        # speech_prompt_proj = self.speech_prompt_proj(speech_prompt)
-        speech_prompt_proj, speech_mask = self.speech_prompt_proj(speech_prompt, speech_lengths)
+        speech_mask = torch.unsqueeze(sequence_mask(speech_lengths, speech_prompt.size(2)), 1).to(x_emb.dtype)
+         
+        speech_prompt_proj = self.speech_prompt_proj(speech_prompt)
+        # speech_prompt_proj, speech_mask = self.speech_prompt_proj(speech_prompt, speech_lengths)
         speech_prompt_proj = self.speech_prompt_encoder(speech_prompt_proj, speech_mask)
 
         x_speech_cat = torch.cat([speech_prompt_proj, x_emb], dim=2)
@@ -615,8 +617,6 @@ class TextEncoder(nn.Module):
         # add positional encoding to speech prompt and x_split
         # x_split = self.text_pos_emb(x_split.unsqueeze(1).transpose(-2,-1)).squeeze(1).transpose(-2,-1)
         x_split_mask = torch.unsqueeze(sequence_mask(x_lengths, x_split.size(2)), 1).to(x_split.dtype)      
-        speech_lengths = x_speech_lengths - x_lengths
-        speech_mask = torch.unsqueeze(sequence_mask(speech_lengths, speech_prompt_proj.size(2)), 1).to(x_split.dtype)
                
         # speech_prompt = self.speech_prompt_pos_emb(speech_prompt_proj.unsqueeze(1).transpose(-2,-1)).squeeze(1).transpose(-2,-1)
         # x_split = self.decoder(x_split, x_split_mask, speech_prompt, speech_mask)
