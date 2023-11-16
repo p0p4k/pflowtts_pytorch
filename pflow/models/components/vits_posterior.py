@@ -40,4 +40,5 @@ class PosteriorEncoder(nn.Module):
         # m, logs = torch.split(stats, self.out_channels, dim=1)
         # z = (m + torch.randn_like(m) * torch.exp(logs)) * x_mask
         # z = m * x_mask
+        stats = (stats + torch.rand_like(stats)) * x_mask
         return stats, x_mask
