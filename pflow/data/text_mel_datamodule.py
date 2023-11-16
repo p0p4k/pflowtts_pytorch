@@ -196,6 +196,9 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
+        if len(datapoint["wav"]) < 66150:
+            # skip datapoint if too short
+            return self.__getitem__(random.randint(0, len(self.filepaths_and_text)-1))
         return datapoint
 
     def __len__(self):
