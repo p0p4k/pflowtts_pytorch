@@ -196,16 +196,28 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
+        if datapoint["wav"].shape[-1] < 66150:
+            # skip datapoint if too short (3s)
+            return self.__getitem__(random.randint(0, len(self.filepaths_and_text)-1))
         return datapoint
 
     def __len__(self):
         return len(self.filepaths_and_text)
 
-
+from audiolm_pytorch import EncodecWrapper
 class TextMelBatchCollate:
-    def __init__(self, n_spks):
+    def __init__(self, n_spks, get_codes=True):
         self.n_spks = n_spks
-
+        self.get_codes = get_codes
+        if self.get_codes:
+            self.encodec = EncodecWrapper()
+        
+    def batched_encodec(self, wav):
+        with torch.no_grad():
+            self.encodec.eval()
+            prompts, _, _ = self.encodec(wav, curtail_from_left = True, return_encoded = True)
+        return prompts
+    
     def __call__(self, batch):
         B = len(batch)
         y_max_length = max([item["y"].shape[-1] for item in batch])
@@ -230,12 +242,17 @@ class TextMelBatchCollate:
             x[i, : x_.shape[-1]] = x_
             wav[i, :, : wav_.shape[-1]] = wav_
             spks.append(item["spk"])
-
+        
+        if self.get_codes:
+            codes = self.batched_encodec(wav)
+            codes_lengths = [1 + wav_len // 320 for wav_len in wav_lengths]
+            codes = codes.squeeze(0).transpose(1,2)
+        
         y_lengths = torch.tensor(y_lengths, dtype=torch.long)
         x_lengths = torch.tensor(x_lengths, dtype=torch.long)
         wav_lengths = torch.tensor(wav_lengths, dtype=torch.long)
         spks = torch.tensor(spks, dtype=torch.long) if self.n_spks > 1 else None
-        
+        codes_lengths = torch.tensor(codes_lengths, dtype=torch.long) if self.get_codes else None
         return {
             "x": x, 
             "x_lengths": x_lengths, 
@@ -244,6 +261,10 @@ class TextMelBatchCollate:
             "spks": spks, 
             "wav":wav, 
             "wav_lengths":wav_lengths,
+            "codes":codes,
+            "codes_lengths":codes_lengths,
             "prompt_spec": y,
             "prompt_lengths": y_lengths,
+            "prompt_codes": codes,
+            "prompt_codes_lengths": codes_lengths,
             }

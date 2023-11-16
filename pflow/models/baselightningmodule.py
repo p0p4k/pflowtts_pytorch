@@ -61,7 +61,9 @@ class BaseLightningClass(LightningModule, ABC):
 
     def get_losses(self, batch):
         x, x_lengths = batch["x"], batch["x_lengths"]
-        y, y_lengths = batch["y"], batch["y_lengths"]
+        y, y_lengths = batch["codes"], batch["codes_lengths"]
+        y = y.squeeze(-2).transpose(1,2)
+        # y, y_lengths = batch["y"], batch["y_lengths"]
         # prompt_spec = batch["prompt_spec"]
         # prompt_lengths = batch["prompt_lengths"]
         # prompt_slice, ids_slice = commons.rand_slice_segments(
@@ -212,11 +214,13 @@ class BaseLightningClass(LightningModule, ABC):
             for i in range(2):
                 x = one_batch["x"][i].unsqueeze(0).to(self.device)
                 x_lengths = one_batch["x_lengths"][i].unsqueeze(0).to(self.device)
-                y = one_batch["y"][i].unsqueeze(0).to(self.device)
-                y_lengths = one_batch["y_lengths"][i].unsqueeze(0).to(self.device)
+                # y = one_batch["y"][i].unsqueeze(0).to(self.device)
+                # y_lengths = one_batch["y_lengths"][i].unsqueeze(0).to(self.device)
                 # prompt = one_batch["prompt_spec"][i].unsqueeze(0).to(self.device)
                 # prompt_lengths = one_batch["prompt_lengths"][i].unsqueeze(0).to(self.device)
-                prompt = y
+                y = one_batch["codes"][i].unsqueeze(0).to(self.device)
+                y_lengths = one_batch["codes_lengths"][i].unsqueeze(0).to(self.device)
+                prompt = y.squeeze(-2).transpose(1,2)
                 prompt_lengths = y_lengths
                 prompt_slice, ids_slice = commons.rand_slice_segments(
                         prompt, prompt_lengths, self.prompt_size
