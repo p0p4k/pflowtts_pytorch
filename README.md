@@ -231,4 +231,6 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
         - dev/stochastic -> some changes to posterior sampling and text encoder (prior) to make it stochastic
         - dev/encodec -> predicts encodec continuous latent instead of mel spectrogram; if works, use encodec for decoding instead of hifi-gan
         - exp/end2end -> end to end training of pflow with hi-fi gan to generate audio directly from text and speech prompt input; if it works, vits-tts will be obsolete.
+- [x] (11/17/2023)
+    - 24 epochs encodec sample (although robotic, it is a proof of concept) [encodec_poc.wav](encodec_poc.wav)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
