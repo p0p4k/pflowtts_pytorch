@@ -135,10 +135,10 @@ class CFM(BASECFM):
         self.estimator = VitsWNDecoder(
             in_channels=in_channels,
             out_channels=out_channel,
-            hidden_channels=256,
+            hidden_channels=out_channel,
             kernel_size=3,
             dilation_rate=1,
             n_layers=18,
-            gin_channels=256*2
+            gin_channels=out_channel*2
         )
         
