@@ -41,19 +41,15 @@ class BaseLightningClass(LightningModule, ABC):
 
             scheduler_args.update({"optimizer": optimizer})
             scheduler = self.hparams.scheduler.scheduler(**scheduler_args)
-            print(self.ckpt_loaded_epoch - 1)
-            if hasattr(self, "ckpt_loaded_epoch"):
-                scheduler.last_epoch = self.ckpt_loaded_epoch - 1
-            else:
-                scheduler.last_epoch = -1
+
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    # "interval": self.hparams.scheduler.lightning_args.interval,
-                    # "frequency": self.hparams.scheduler.lightning_args.frequency,
-                    # "name": "learning_rate",
-                    "monitor": "val_loss",
+                    "interval": self.hparams.scheduler.lightning_args.interval,
+                    "frequency": self.hparams.scheduler.lightning_args.frequency,
+                    "name": "learning_rate",
+                    "monitor": "val/loss",
                 },
             }
 
@@ -62,6 +58,7 @@ class BaseLightningClass(LightningModule, ABC):
     def get_losses(self, batch):
         x, x_lengths = batch["x"], batch["x_lengths"]
         y, y_lengths = batch["y"], batch["y_lengths"]
+        # wav, wav_lengths = batch["wav"], batch["wav_lengths"]
         # prompt_spec = batch["prompt_spec"]
         # prompt_lengths = batch["prompt_lengths"]
         # prompt_slice, ids_slice = commons.rand_slice_segments(
@@ -70,17 +67,20 @@ class BaseLightningClass(LightningModule, ABC):
         #                 self.prompt_size
         #             )
         prompt_slice = None
-        dur_loss, prior_loss, diff_loss, attn = self(
+        dur_loss, prior_loss, diff_loss, mel_loss, attn = self(
             x=x,
             x_lengths=x_lengths,
             y=y,
             y_lengths=y_lengths,
             prompt=prompt_slice,
+            # wav=wav,
+            # wav_lengths=wav_lengths,
         )
         return ({
             "dur_loss": dur_loss,
             "prior_loss": prior_loss,
             "diff_loss": diff_loss,
+            "mel_loss": mel_loss,
             },
             {
             "attn": attn
@@ -126,7 +126,15 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             sync_dist=True,
         )
-        
+        self.log(
+            "sub_loss/train_mel_loss",
+            loss_dict["mel_loss"],
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
+
         total_loss = sum(loss_dict.values())
         self.log(
             "loss/train",
@@ -167,6 +175,14 @@ class BaseLightningClass(LightningModule, ABC):
         self.log(
             "sub_loss/val_diff_loss",
             loss_dict["diff_loss"],
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "sub_loss/val_mel_loss",
+            loss_dict["mel_loss"],
             on_step=True,
             on_epoch=True,
             logger=True,
@@ -224,6 +240,7 @@ class BaseLightningClass(LightningModule, ABC):
                 output = self.synthesise(x[:, :x_lengths], x_lengths, prompt=prompt_slice, n_timesteps=10)
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]
+                hifigan_output = output["hifigan_out"]
                 self.logger.experiment.add_image(
                     f"generated_enc/{i}",
                     plot_tensor(y_enc.squeeze().cpu()),
@@ -242,6 +259,12 @@ class BaseLightningClass(LightningModule, ABC):
                     self.current_epoch,
                     dataformats="HWC",
                 )
+                self.logger.experiment.add_audio(
+                    f"hifigan/{i}",
+                    hifigan_output.squeeze().detach().cpu(), 
+                    sample_rate=22050,
+                    global_step=self.current_epoch
+                    )
 
     def on_before_optimizer_step(self, optimizer):
         self.log_dict({f"grad_norm/{k}": v for k, v in grad_norm(self, norm_type=2).items()})

@@ -184,7 +184,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             self.f_max,
             center=False,
         ).squeeze()
-        mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
+        # mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
         return mel, audio
 
     def get_text(self, text, add_blank=True):

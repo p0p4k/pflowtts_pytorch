@@ -146,7 +146,7 @@ Let's assume we are training with LJ Speech
 train_filelist_path: data/filelists/ljs_audio_text_train_filelist.txt
 valid_filelist_path: data/filelists/ljs_audio_text_val_filelist.txt
 ```
-4. Generate normalisation statistics with the yaml file of dataset configuration
+<!-- 4. Generate normalisation statistics with the yaml file of dataset configuration
 
 ```bash
 cd pflowtts_pytorch/pflow/utils
@@ -162,7 +162,7 @@ data_statistics:  # Computed for ljspeech dataset
   mel_mean: -5.536622
   mel_std: 2.116101
 ```
-to the paths of your train and validation filelists.
+to the paths of your train and validation filelists. -->
 
 5. Run the training script
 
@@ -191,27 +191,6 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
 - [x] HiFiGan for vocoder
 
 ## TODOs, features and update notes
-- [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
-- [x] (11/12/2023) Check out `notebooks` for a quick dry run and architecture testing of the model.
-- [x] ~(11/12/2023) Training fails on my dataset at the moment, will debug and fix it soon. But the training the code runs error-free.~
-- [x] (11/13/2023) 
-    - fixed big mistake in monotonic align build
-    - lot of combinations possible within model
-    - architecture big picture is same like paper, but internals are different
-    - if model doesnt converge, will eventually settle to paper's exact architecture
-- [x] (11/13/2023) Tensorboard screenshot
-    ![Alt text](init_tensorboard_11_13_23.png)
-- [x] (11/13/2023)
-    - added installation instructions
-- [x] (11/13/2023)
-    - looks like the model is learning and is on the right track. 
-    ![Alt text](val_out_tboard.png)
-- [x] (11/14/2023)
-    ![Alt text](20k_tboard.png)
-- [x] (11/14/2023)
-    - added Google Colab notebook for quick run
-- [x] (11/16/2023)
-    - added sample audio
-    - some architecture changes
-    - we know the model learns, now we need to try multispeaker and check for prosody.
+- [x] For end2end training, we combine HiFiGan with the CFM based latent generation and add a 'lil bit of stochasticity here and there.
+- [x] not using discriminator for training yet, but it is there in commented code.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
