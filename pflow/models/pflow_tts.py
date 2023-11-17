@@ -104,6 +104,7 @@ class pflowTTS(BaseLightningClass):  #
         prompt_lengths = prompt.new_full(
                 (prompt.size(0),), self.prompt_size
             )
+            
         prompt = self.enc_spec(prompt, prompt_lengths)[0]
         mu_x, logw, x_mask = self.encoder(x, x_lengths, prompt)
         w = torch.exp(logw) * x_mask
@@ -151,11 +152,12 @@ class pflowTTS(BaseLightningClass):  #
             
         else:
             prompt_slice = prompt
-        prompt_lengths = prompt_slice.new_full(
-                (prompt_slice.size(0),), self.prompt_size
-            )
-        with torch.no_grad():
-            prompt_slice = self.enc_spec(prompt_slice, prompt_lengths)[0]
+        
+        # prompt_lengths = prompt_slice.new_full(
+        #         (prompt_slice.size(0),), self.prompt_size
+        #     )
+        # with torch.no_grad():
+        #     prompt_slice = self.enc_spec(prompt_slice, prompt_lengths)[0]
 
         mu_x, logw, x_mask = self.encoder(x, x_lengths, prompt_slice)
        
@@ -208,9 +210,9 @@ class pflowTTS(BaseLightningClass):  #
         mu_y = mu_y.transpose(1, 2)
 
         y_loss_mask = sequence_mask(y_lengths, y_max_length).unsqueeze(1).to(x_mask)
-        if prompt is None:
-            for i in range(y.size(0)):  
-                y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
+        # if prompt is None:
+        #     for i in range(y.size(0)):  
+        #         y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
         # Compute loss of the decoder
         diff_loss, _ = self.decoder.compute_loss(x1=z_spec.detach(), mask=y_mask, mu=mu_y, cond=cond, loss_mask=y_loss_mask)
         
