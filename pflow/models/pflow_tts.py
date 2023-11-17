@@ -101,6 +101,10 @@ class pflowTTS(BaseLightningClass):  #
         t = dt.datetime.now()
         assert prompt is not None, "Prompt must be provided for synthesis"
         # Get encoder_outputs `mu_x` and log-scaled token durations `logw`
+        prompt_lengths = prompt.new_full(
+                (prompt.size(0),), self.prompt_size
+            )
+        prompt = self.enc_spec(prompt, prompt_lengths)[0]
         mu_x, logw, x_mask = self.encoder(x, x_lengths, prompt)
         w = torch.exp(logw) * x_mask
         w_ceil = torch.ceil(w) * length_scale
@@ -139,13 +143,19 @@ class pflowTTS(BaseLightningClass):  #
         }
 
     def forward(self, x, x_lengths, y, y_lengths, prompt=None, cond=None, **kwargs):        
-        
+        z_spec, spec_mask = self.enc_spec(y, y_lengths)
         if prompt is None:
             prompt_slice, ids_slice = commons.rand_slice_segments(
                         y, y_lengths, self.prompt_size
                     )
+            
         else:
             prompt_slice = prompt
+        prompt_lengths = prompt_slice.new_full(
+                (prompt_slice.size(0),), self.prompt_size
+            )
+        with torch.no_grad():
+            prompt_slice = self.enc_spec(prompt_slice, prompt_lengths)[0]
 
         mu_x, logw, x_mask = self.encoder(x, x_lengths, prompt_slice)
        
@@ -153,7 +163,7 @@ class pflowTTS(BaseLightningClass):  #
         
         y_mask = sequence_mask(y_lengths, y_max_length).unsqueeze(1).to(x_mask)
         attn_mask = x_mask.unsqueeze(-1) * y_mask.unsqueeze(2)
-        z_spec, spec_mask = self.enc_spec(y, y_lengths)
+        
 
         with torch.no_grad():
         # negative cross-entropy
@@ -214,17 +224,6 @@ class pflowTTS(BaseLightningClass):  #
                 z_spec, y_lengths , segment_size=SEGMENT_SIZE//256
             )
         output_sliced_wav = self.hifigan(z_sliced)
-
-        # real_wav_slice = commons.slice_segments(
-        #         wav, ids_slice * 256, SEGMENT_SIZE
-        #     ) 
-        # y_d_hat_r, y_d_hat_g, _, _ = self.hifigan_disc(real_wav_slice, output_sliced_wav.detach())
-        # loss_disc, losses_disc_r, losses_disc_g = discriminator_loss(y_d_hat_r, y_d_hat_g)
-        # y_d_hat_r, y_d_hat_g, fmap_r, fmap_g = self.hifigan_disc(real_wav_slice, output_sliced_wav)
-        # loss_gen, losses_gen = generator_loss(y_d_hat_g)
-        # loss_fm = feature_loss(fmap_r, fmap_g)
-        # loss_gen += loss_fm
-        
         y_slice = commons.slice_segments(
                 y, ids_slice, SEGMENT_SIZE//256
                 )

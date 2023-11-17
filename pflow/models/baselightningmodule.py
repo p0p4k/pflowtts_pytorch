@@ -241,6 +241,13 @@ class BaseLightningClass(LightningModule, ABC):
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]
                 hifigan_output = output["hifigan_out"]
+                mel = output["mel"]
+                self.logger.experiment.add_image(
+                    f"generated_mel/{i}",
+                    plot_tensor(mel.squeeze().cpu()),
+                    self.current_epoch,
+                    dataformats="HWC",
+                )
                 self.logger.experiment.add_image(
                     f"generated_enc/{i}",
                     plot_tensor(y_enc.squeeze().cpu()),
