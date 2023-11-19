@@ -116,7 +116,7 @@ class BASECFM(torch.nn.Module, ABC):
 
         if loss_mask is not None:
             mask = loss_mask
-        loss = F.mse_loss(estimator_out, u, reduction="sum") / (
+        loss = F.mse_loss(estimator_out*mask, u*mask, reduction="sum") / (
             torch.sum(mask) * u.shape[1]
         )
         return loss, y
