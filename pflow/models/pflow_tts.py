@@ -172,7 +172,7 @@ class pflowTTS(BaseLightningClass):  #
         y_loss_mask = sequence_mask(y_lengths, y_max_length).unsqueeze(1).to(x_mask)
         if prompt is None:
             for i in range(y.size(0)):  
-                y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = 0 
+                y_loss_mask[i,:,ids_slice[i]:ids_slice[i] + self.prompt_size] = False 
         # Compute loss of the decoder
         diff_loss, _ = self.decoder.compute_loss(x1=y.detach(), mask=y_mask, mu=mu_y, cond=cond, loss_mask=y_loss_mask)
         
