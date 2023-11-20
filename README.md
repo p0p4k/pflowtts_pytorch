@@ -1,8 +1,8 @@
 ## P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting
-### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina,Mikyas Desta1, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
+### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina, Mikyas Desta, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
 #### Affiliations: NVIDIA
 
-## Status : Generated first sample (Check LJSpeech_Sample_100_epochs.wav) on 11/16/2023. 
+## Status : Added newer samples with better prosody and pronunciation. Check out `samples` folder. (LJSpeech trained for around 40k steps)
 
 Unofficial implementation of the paper [P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting](https://openreview.net/pdf?id=zNA7u7wtIN) by NVIDIA.
 
@@ -237,4 +237,6 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - Model is more or less ready.
     - Added 3 choices for estimators, need to make them into hyperparameters and add them to the config file.
     - Thanks to [@zidsi](https://github.com/zidsi) for pointing out typos in the code.
+- [x] (11/21/2023)
+    - Added newer samples with better prosody and pronunciation. Check out `samples` folder. (LJSpeech trained for around 40k steps) _Paper recommends 800k steps._
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
