@@ -233,4 +233,8 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
         - exp/end2end -> end to end training of pflow with hi-fi gan to generate audio directly from text and speech prompt input; if it works, vits-tts will be obsolete.
 - [x] (11/17/2023)
     - 24 epochs encodec sample (although robotic, it is a proof of concept) [encodec_poc.wav](encodec_poc.wav)
+- [x] (11/20/2023)
+    - Model is more or less ready.
+    - Added 3 choices for estimators, need to make them into hyperparameters and add them to the config file.
+    - Thanks to [@zidsi](https://github.com/zidsi) for pointing out typos in the code.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
