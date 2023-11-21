@@ -238,5 +238,5 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - Added 3 choices for estimators, need to make them into hyperparameters and add them to the config file.
     - Thanks to [@zidsi](https://github.com/zidsi) for pointing out typos in the code.
 - [x] (11/21/2023)
-    - Added newer samples with better prosody and pronunciation. Check out `samples` folder. (LJSpeech trained for around 40k steps) _Paper recommends 800k steps._
+    - Added newer samples with better prosody and pronunciation. Check out `samples` folder. (LJSpeech) _Paper recommends 800k steps._
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
