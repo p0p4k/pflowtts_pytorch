@@ -31,14 +31,14 @@ class PosteriorEncoder(nn.Module):
                               gin_channels=gin_channels)
         self.proj = nn.Conv1d(hidden_channels, out_channels, 1)
 
-    def forward(self, x, x_lengths, g=None):
-        x_mask = torch.unsqueeze(commons.sequence_mask(x_lengths, x.size(2)),
-                                 1).to(x.dtype)
+    def forward(self, x, x_lengths=None, g=None, x_mask=None):
+        if x_mask is None:
+            x_mask = torch.unsqueeze(commons.sequence_mask(x_lengths, x.size(2)),
+                                    1).to(x.dtype)
         x = self.pre(x) * x_mask
         x = self.enc(x, x_mask, g=g)
         stats = self.proj(x) * x_mask
         # m, logs = torch.split(stats, self.out_channels, dim=1)
         # z = (m + torch.randn_like(m) * torch.exp(logs)) * x_mask
         # z = m * x_mask
-        stats = (stats + torch.rand_like(stats)) * x_mask
         return stats, x_mask

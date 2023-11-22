@@ -65,7 +65,7 @@ def get_texts(args):
 
 def assert_required_models_available(args):
     save_dir = get_user_data_dir()
-    if not hasattr(args, "checkpoint_path") and args.checkpoint_path is None:
+    if hasattr(args, "checkpoint_path") and args.checkpoint_path is not None:
         model_path = args.checkpoint_path
     else:
         model_path = save_dir / f"{args.model}.ckpt"
@@ -326,7 +326,7 @@ def batched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
             batch["x_lengths"].to(device),
             n_timesteps=args.steps,
             temperature=args.temperature,
-            spks=spk,
+            # spks=spk,
             length_scale=args.speaking_rate,
         )
 
