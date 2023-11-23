@@ -112,11 +112,10 @@ class BASECFM(torch.nn.Module, ABC):
         y = (1 - (1 - self.sigma_min) * t) * z + t * x1
         u = x1 - (1 - self.sigma_min) * z
         # y = u * t + z
-        estimator_out = self.estimator(y, mask, mu, t.squeeze(), training=training)
-
         if loss_mask is not None:
             mask = loss_mask
-        loss = F.mse_loss(estimator_out, u, reduction="sum") / (
+        estimator_out = self.estimator(y, mask, mu, t.squeeze(), training=training)
+        loss = F.mse_loss(estimator_out*mask, u*mask, reduction="sum") / (
             torch.sum(mask) * u.shape[1]
         )
         return loss, y
@@ -130,15 +129,15 @@ class CFM(BASECFM):
         )
 
         # Just change the architecture of the estimator here
-        # self.estimator = Decoder(in_channels=in_channels*2, out_channels=out_channel, **decoder_params)
+        self.estimator = Decoder(in_channels=in_channels*2, out_channels=out_channel, **decoder_params)
         # self.estimator = DiffSingerNet(in_dims=in_channels, encoder_hidden=out_channel)
-        self.estimator = VitsWNDecoder(
-            in_channels=in_channels,
-            out_channels=out_channel,
-            hidden_channels=out_channel,
-            kernel_size=3,
-            dilation_rate=1,
-            n_layers=18,
-            gin_channels=out_channel*2
-        )
+        # self.estimator = VitsWNDecoder(
+        #     in_channels=in_channels,
+        #     out_channels=out_channel,
+        #     hidden_channels=out_channel,
+        #     kernel_size=3,
+        #     dilation_rate=1,
+        #     n_layers=18,
+        #     gin_channels=out_channel*2
+        # )
         

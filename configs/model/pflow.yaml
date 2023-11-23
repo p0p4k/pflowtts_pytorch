@@ -9,6 +9,6 @@ _target_: pflow.models.pflow_tts.pflowTTS
 n_vocab: 178
 n_spks: ${data.n_spks}
 spk_emb_dim: 64
-n_feats: 1
+n_feats: 80
 data_statistics: ${data.data_statistics}
 out_size: null # Must be divisible by 4

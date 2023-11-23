@@ -184,7 +184,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             self.f_max,
             center=False,
         ).squeeze()
-        # mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
+        mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
         return mel, audio
 
     def get_text(self, text, add_blank=True):
@@ -196,8 +196,12 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
-        if len(datapoint["wav"]) < 66150:
-            # skip datapoint if too short
+        if datapoint["wav"].shape[1] <= 66150:
+            ''' 
+            skip datapoint if too short (3s) 
+            TODO To not waste data, we can concatenate wavs less than 3s and use them
+            TODO as a hyperparameter; multispeaker dataset can use another wav of same speaker
+            '''
             return self.__getitem__(random.randint(0, len(self.filepaths_and_text)-1))
         return datapoint
 

@@ -41,19 +41,15 @@ class BaseLightningClass(LightningModule, ABC):
 
             scheduler_args.update({"optimizer": optimizer})
             scheduler = self.hparams.scheduler.scheduler(**scheduler_args)
-            print(self.ckpt_loaded_epoch - 1)
-            if hasattr(self, "ckpt_loaded_epoch"):
-                scheduler.last_epoch = self.ckpt_loaded_epoch - 1
-            else:
-                scheduler.last_epoch = -1
+
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    # "interval": self.hparams.scheduler.lightning_args.interval,
-                    # "frequency": self.hparams.scheduler.lightning_args.frequency,
-                    # "name": "learning_rate",
-                    "monitor": "val_loss",
+                    "interval": self.hparams.scheduler.lightning_args.interval,
+                    "frequency": self.hparams.scheduler.lightning_args.frequency,
+                    "name": "learning_rate",
+                    "monitor": "val/loss",
                 },
             }
 
@@ -61,8 +57,8 @@ class BaseLightningClass(LightningModule, ABC):
 
     def get_losses(self, batch):
         x, x_lengths = batch["x"], batch["x_lengths"]
-        # y, y_lengths = batch["y"], batch["y_lengths"]
-        y, y_lengths = batch["wav"], batch["wav_lengths"]
+        y, y_lengths = batch["y"], batch["y_lengths"]
+        # wav, wav_lengths = batch["wav"], batch["wav_lengths"]
         # prompt_spec = batch["prompt_spec"]
         # prompt_lengths = batch["prompt_lengths"]
         # prompt_slice, ids_slice = commons.rand_slice_segments(
@@ -71,19 +67,20 @@ class BaseLightningClass(LightningModule, ABC):
         #                 self.prompt_size
         #             )
         prompt_slice = None
-        dur_loss, prior_loss, diff_loss, attn = self(
+        dur_loss, prior_loss, diff_loss, mel_loss, attn = self(
             x=x,
             x_lengths=x_lengths,
             y=y,
             y_lengths=y_lengths,
+            prompt=prompt_slice,
             # wav=wav,
             # wav_lengths=wav_lengths,
-            prompt=prompt_slice,
         )
         return ({
             "dur_loss": dur_loss,
             "prior_loss": prior_loss,
             "diff_loss": diff_loss,
+            "mel_loss": mel_loss,
             },
             {
             "attn": attn
@@ -129,7 +126,15 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             sync_dist=True,
         )
-        
+        self.log(
+            "sub_loss/train_mel_loss",
+            loss_dict["mel_loss"],
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
+
         total_loss = sum(loss_dict.values())
         self.log(
             "loss/train",
@@ -175,6 +180,14 @@ class BaseLightningClass(LightningModule, ABC):
             logger=True,
             sync_dist=True,
         )
+        self.log(
+            "sub_loss/val_mel_loss",
+            loss_dict["mel_loss"],
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
 
         total_loss = sum(loss_dict.values())
         self.log(
@@ -203,28 +216,20 @@ class BaseLightningClass(LightningModule, ABC):
             if self.current_epoch == 0:
                 log.debug("Plotting original samples")
                 for i in range(2):
-                    # y = one_batch["y"][i].unsqueeze(0).to(self.device)
-                    # self.logger.experiment.add_image(
-                    #     f"original/{i}",
-                    #     plot_tensor(y.squeeze().cpu()),
-                    #     self.current_epoch,
-                    #     dataformats="HWC",
-                    # )
-                    y = one_batch["wav"][i].unsqueeze(0).to(self.device)
-                    self.logger.experiment.add_audio(
-                    f"original/{i}",
-                    y.squeeze().cpu(),
-                    self.current_epoch,
-                    sample_rate=22050,
+                    y = one_batch["y"][i].unsqueeze(0).to(self.device)
+                    self.logger.experiment.add_image(
+                        f"original/{i}",
+                        plot_tensor(y.squeeze().cpu()),
+                        self.current_epoch,
+                        dataformats="HWC",
                     )
+
             log.debug("Synthesising...")
             for i in range(2):
                 x = one_batch["x"][i].unsqueeze(0).to(self.device)
                 x_lengths = one_batch["x_lengths"][i].unsqueeze(0).to(self.device)
-                # y = one_batch["y"][i].unsqueeze(0).to(self.device)
-                # y_lengths = one_batch["y_lengths"][i].unsqueeze(0).to(self.device)
-                y = one_batch["wav"][i].unsqueeze(0).to(self.device)
-                y_lengths = one_batch["wav_lengths"][i].unsqueeze(0).to(self.device)
+                y = one_batch["y"][i].unsqueeze(0).to(self.device)
+                y_lengths = one_batch["y_lengths"][i].unsqueeze(0).to(self.device)
                 # prompt = one_batch["prompt_spec"][i].unsqueeze(0).to(self.device)
                 # prompt_lengths = one_batch["prompt_lengths"][i].unsqueeze(0).to(self.device)
                 prompt = y
@@ -235,25 +240,25 @@ class BaseLightningClass(LightningModule, ABC):
                 output = self.synthesise(x[:, :x_lengths], x_lengths, prompt=prompt_slice, n_timesteps=10)
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]
-                # self.logger.experiment.add_image(
-                #     f"generated_enc/{i}",
-                #     plot_tensor(y_enc.squeeze().cpu()),
-                #     self.current_epoch,
-                #     dataformats="HWC",
-                # )
-                # y_dec = y_dec.cpu()
-                # print(y_dec.shape)
-                # self.logger.experiment.add_image(
-                #     f"generated_dec/{i}",
-                #     plot_tensor(y_dec),
-                #     self.current_epoch,
-                #     dataformats="HWC",
-                # )
-                self.logger.experiment.add_audio(
-                    f"generated_wav/{i}",
-                    y_dec.squeeze().cpu(),
+                hifigan_output = output["hifigan_out"]
+                mel = output["mel"]
+                self.logger.experiment.add_image(
+                    f"generated_mel/{i}",
+                    plot_tensor(mel.squeeze().cpu()),
                     self.current_epoch,
-                    sample_rate=22050,
+                    dataformats="HWC",
+                )
+                self.logger.experiment.add_image(
+                    f"generated_enc/{i}",
+                    plot_tensor(y_enc.squeeze().cpu()),
+                    self.current_epoch,
+                    dataformats="HWC",
+                )
+                self.logger.experiment.add_image(
+                    f"generated_dec/{i}",
+                    plot_tensor(y_dec.squeeze().cpu()),
+                    self.current_epoch,
+                    dataformats="HWC",
                 )
                 self.logger.experiment.add_image(
                     f"alignment/{i}",
@@ -261,6 +266,12 @@ class BaseLightningClass(LightningModule, ABC):
                     self.current_epoch,
                     dataformats="HWC",
                 )
+                self.logger.experiment.add_audio(
+                    f"hifigan/{i}",
+                    hifigan_output.squeeze().detach().cpu(), 
+                    sample_rate=22050,
+                    global_step=self.current_epoch
+                    )
 
     def on_before_optimizer_step(self, optimizer):
         self.log_dict({f"grad_norm/{k}": v for k, v in grad_norm(self, norm_type=2).items()})

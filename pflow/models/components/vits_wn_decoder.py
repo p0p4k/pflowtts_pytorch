@@ -67,7 +67,6 @@ class VitsWNDecoder(nn.Module):
     def forward(self, x, x_mask, mu, t, *args, **kwargs):
         # x_mask = torch.unsqueeze(commons.sequence_mask(x_lengths, x.size(2)),
         #                          1).to(x.dtype)
-
         t = self.time_pos_emb(t, scale=self.pe_scale)
         t = self.mlp(t)
 
@@ -76,4 +75,5 @@ class VitsWNDecoder(nn.Module):
         x = torch.cat((x, mu), dim=1)
         x = self.enc(x, x_mask, g=t)
         stats = self.proj(x) * x_mask
+
         return stats
