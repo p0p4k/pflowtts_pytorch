@@ -53,7 +53,7 @@ class BASECFM(torch.nn.Module, ABC):
         t_span = torch.linspace(0, 1, n_timesteps + 1, device=mu.device)
         return self.solve_euler(z, t_span=t_span, mu=mu, mask=mask, cond=cond, training=training)
 
-    def solve_euler(self, x, t_span, mu, mask,  cond, training=False):
+    def solve_euler(self, x, t_span, mu, mask,  cond, training=False, guidance_scale=0):
         """
         Fixed euler solver for ODEs.
         Args:
@@ -74,6 +74,10 @@ class BASECFM(torch.nn.Module, ABC):
         steps = 1
         while steps <= len(t_span) - 1:
             dphi_dt = self.estimator(x, mask, mu, t, cond, training=training)
+            if guidance_scale > 0:
+                mu_avg = mu.mean(2, keepdims=True).expand_as(mu)
+                dphi_avg = self.estimator(x, mask, mu_avg, t, cond, training=training)
+                dphi_dt = dphi_dt + guidance_scale * (dphi_dt - dphi_avg)
 
             x = x + dt * dphi_dt
             t = t + dt
@@ -83,7 +87,7 @@ class BASECFM(torch.nn.Module, ABC):
             steps += 1
 
         return sol[-1]
-
+        
     def compute_loss(self, x1, mask, mu, cond=None, training=True, loss_mask=None):
         """Computes diffusion loss
 
