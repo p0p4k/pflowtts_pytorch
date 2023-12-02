@@ -16,7 +16,6 @@ from pflow.models.components import commons
 
 log = utils.get_pylogger(__name__)
 
-
 class BaseLightningClass(LightningModule, ABC):
     def update_data_statistics(self, data_statistics):
         if data_statistics is None:
@@ -62,7 +61,6 @@ class BaseLightningClass(LightningModule, ABC):
     def get_losses(self, batch):
         x, x_lengths = batch["x"], batch["x_lengths"]
         y, y_lengths = batch["codes"], batch["codes_lengths"]
-        y = y.squeeze(-2).transpose(1,2)
         # y, y_lengths = batch["y"], batch["y_lengths"]
         # prompt_spec = batch["prompt_spec"]
         # prompt_lengths = batch["prompt_lengths"]
@@ -220,7 +218,7 @@ class BaseLightningClass(LightningModule, ABC):
                 # prompt_lengths = one_batch["prompt_lengths"][i].unsqueeze(0).to(self.device)
                 y = one_batch["codes"][i].unsqueeze(0).to(self.device)
                 y_lengths = one_batch["codes_lengths"][i].unsqueeze(0).to(self.device)
-                prompt = y.squeeze(-2).transpose(1,2)
+                prompt = y
                 prompt_lengths = y_lengths
                 prompt_slice, ids_slice = commons.rand_slice_segments(
                         prompt, prompt_lengths, self.prompt_size

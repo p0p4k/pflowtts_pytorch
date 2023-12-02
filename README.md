@@ -130,6 +130,11 @@ Stay in the root directory (of course clone the repo first!)
 cd pflowtts_pytorch
 pip install -r requirements.txt
 ```
+```sh
+git clone https://github.com/descriptinc/descript-audio-codec
+cd descript-audio-codec
+pip install -e .
+```
 
 1. Build Monotonic Alignment Search 
 ```sh

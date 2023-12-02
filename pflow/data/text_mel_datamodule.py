@@ -92,7 +92,11 @@ class TextMelDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
-            collate_fn=TextMelBatchCollate(self.hparams.n_spks),
+            collate_fn=TextMelBatchCollate(
+                self.hparams.n_spks, 
+                get_codes=True, 
+                sample_rate=self.hparams.sample_rate
+                ),
         )
 
     def val_dataloader(self):
@@ -102,7 +106,11 @@ class TextMelDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
-            collate_fn=TextMelBatchCollate(self.hparams.n_spks),
+            collate_fn=TextMelBatchCollate(
+                self.hparams.n_spks, 
+                get_codes=True, 
+                sample_rate=self.hparams.sample_rate
+                ),
         )
 
     def teardown(self, stage: Optional[str] = None):
@@ -204,19 +212,30 @@ class TextMelDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.filepaths_and_text)
 
-from audiolm_pytorch import EncodecWrapper
+# from audiolm_pytorch import EncodecWrapper
+# Descript-codec imports
+import dac
+from audiotools import AudioSignal
+import torchaudio
+
 class TextMelBatchCollate:
-    def __init__(self, n_spks, get_codes=True):
+    def __init__(self, n_spks, get_codes=True, sample_rate=22050):
         self.n_spks = n_spks
         self.get_codes = get_codes
+        #TODO model type as argument
         if self.get_codes:
-            self.encodec = EncodecWrapper()
+            self.resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=24000)
+            self.model_path = dac.utils.download(model_type="24khz")
+            self.encodec = dac.DAC.load(self.model_path)
         
     def batched_encodec(self, wav):
         with torch.no_grad():
             self.encodec.eval()
-            prompts, _, _ = self.encodec(wav, curtail_from_left = True, return_encoded = True)
-        return prompts
+            wav = self.resampler(wav) # resample to 24khz
+            signal = AudioSignal(wav, 24000)
+            x = self.encodec.preprocess(signal.audio_data, signal.sample_rate)
+            _, _, latents, _, _ = self.encodec.encode(x)
+        return latents
     
     def __call__(self, batch):
         B = len(batch)
@@ -246,7 +265,7 @@ class TextMelBatchCollate:
         if self.get_codes:
             codes = self.batched_encodec(wav)
             codes_lengths = [1 + wav_len // 320 for wav_len in wav_lengths]
-            codes = codes.squeeze(0).transpose(1,2)
+            codes = codes.squeeze(0)
         
         y_lengths = torch.tensor(y_lengths, dtype=torch.long)
         x_lengths = torch.tensor(x_lengths, dtype=torch.long)
