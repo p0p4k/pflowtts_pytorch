@@ -179,12 +179,6 @@ to the paths of your train and validation filelists.
 5. Run the training script
 
 ```bash
-make train-ljspeech
-```
-
-or
-
-```bash
 python pflow/train.py experiment=ljspeech
 ```
 
@@ -201,6 +195,7 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
 - [x] Speech prompt input currently slices the input spectrogram and concatenates it with the text embedding. Can support external speech prompt input (during training as well)
 - [x] pflow prompt masking loss for training
 - [x] HiFiGan for vocoder
+- [x] Guidance for sampling
 
 ## TODOs, features and update notes
 - [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
