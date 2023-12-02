@@ -33,7 +33,7 @@ class BASECFM(torch.nn.Module, ABC):
         self.estimator = None
 
     @torch.inference_mode()
-    def forward(self, mu, mask, n_timesteps, temperature=1.0, cond=None, training=False):
+    def forward(self, mu, mask, n_timesteps, temperature=1.0, cond=None, training=False, guidance_scale=0.0):
         """Forward diffusion
 
         Args:
@@ -51,9 +51,9 @@ class BASECFM(torch.nn.Module, ABC):
         """
         z = torch.randn_like(mu) * temperature
         t_span = torch.linspace(0, 1, n_timesteps + 1, device=mu.device)
-        return self.solve_euler(z, t_span=t_span, mu=mu, mask=mask, cond=cond, training=training)
+        return self.solve_euler(z, t_span=t_span, mu=mu, mask=mask, cond=cond, training=training, guidance_scale=guidance_scale)
 
-    def solve_euler(self, x, t_span, mu, mask,  cond, training=False, guidance_scale=0):
+    def solve_euler(self, x, t_span, mu, mask,  cond, training=False, guidance_scale=0.0):
         """
         Fixed euler solver for ODEs.
         Args:
@@ -74,7 +74,7 @@ class BASECFM(torch.nn.Module, ABC):
         steps = 1
         while steps <= len(t_span) - 1:
             dphi_dt = self.estimator(x, mask, mu, t, cond, training=training)
-            if guidance_scale > 0:
+            if guidance_scale > 0.0:
                 mu_avg = mu.mean(2, keepdims=True).expand_as(mu)
                 dphi_avg = self.estimator(x, mask, mu_avg, t, cond, training=training)
                 dphi_dt = dphi_dt + guidance_scale * (dphi_dt - dphi_avg)

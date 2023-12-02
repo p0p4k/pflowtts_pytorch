@@ -74,7 +74,7 @@ class pflowTTS(BaseLightningClass):  #
         self.update_data_statistics(data_statistics)
 
     @torch.inference_mode()
-    def synthesise(self, x, x_lengths, prompt, n_timesteps, temperature=1.0, length_scale=1.0):
+    def synthesise(self, x, x_lengths, prompt, n_timesteps, temperature=1.0, length_scale=1.0, guidance_scale=0.0):
 
         # For RTF computation
         t = dt.datetime.now()
@@ -98,7 +98,7 @@ class pflowTTS(BaseLightningClass):  #
         encoder_outputs = mu_y[:, :, :y_max_length]
 
         # Generate sample tracing the probability flow
-        decoder_outputs = self.decoder(mu_y, y_mask, n_timesteps, temperature)
+        decoder_outputs = self.decoder(mu_y, y_mask, n_timesteps, temperature, guidance_scale=guidance_scale)
         decoder_outputs = decoder_outputs[:, :, :y_max_length]
 
         t = (dt.datetime.now() - t).total_seconds()
