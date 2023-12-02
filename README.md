@@ -236,4 +236,6 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - Added newer samples with better prosody and pronunciation. Check out `samples` folder. (LJSpeech trained for 300k steps) _Paper recommends 800k steps._
 - [x] (12/02/2023)
     - Added guidance for euler solver as recommended by the paper. Improves the quality of the audio drastically. Thanks to @robbit on discord for pointing this out.
+- [x] (12/03/2023)
+    - Added descript-codec branch for the curious. (not tested yet)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
