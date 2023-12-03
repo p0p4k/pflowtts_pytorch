@@ -264,7 +264,16 @@ class TextMelBatchCollate:
         
         if self.get_codes:
             codes = self.batched_encodec(wav)
-            codes_lengths = [1 + wav_len // 320 for wav_len in wav_lengths]
+            codes_lengths = []
+            for wav_len in wav_lengths:
+                if wav_len % 320 == 0:
+                    codes_lengths.append(wav_len // 320)
+                else:
+                    codes_lengths.append(1 + wav_len // 320)
+            ## if any codes mismatch issue, uncomment below
+            # codes_max_length = max(codes_lengths)
+            # codes_max_length = fix_len_compatibility(codes_max_length)
+            # codes = codes[:,:,:codes_max_length]
             codes = codes.squeeze(0)
         
         y_lengths = torch.tensor(y_lengths, dtype=torch.long)
