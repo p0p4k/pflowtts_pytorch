@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from pflow import utils
 from pflow.models.baselightningmodule import BaseLightningClass
 from pflow.models.components.flow_matching import CFM
-from pflow.models.components.speech_prompt_encoder import TextEncoder
+from pflow.models.components.speech_prompt_encoder_film import TextEncoder
 from pflow.utils.model import (
     denormalize,
     duration_loss,
