@@ -91,11 +91,31 @@ encoder_overall_params = EncoderOverallParams(
     duration_predictor_params=duration_predictor_params
 )
 
+@dataclass
+class DecoderParams:
+    channels: tuple
+    dropout: float
+    attention_head_dim: int
+    n_blocks: int
+    num_mid_blocks: int
+    num_heads: int
+    act_fn: str
+
+decoder_params = DecoderParams(
+    channels=(256, 256),
+    dropout=0.05,
+    attention_head_dim=64,
+    n_blocks=1,
+    num_mid_blocks=2,
+    num_heads=2,
+    act_fn='snakebeta',
+)
+    
 model = pflowTTS(
     n_vocab=100,
     n_feats=80,
     encoder=encoder_overall_params,
-    decoder=None,
+    decoder=decoder_params.__dict__,
     cfm=cfm_params,
     data_statistics=None,
 )
@@ -105,7 +125,7 @@ x_lengths = torch.randint(10, 20, (4,))
 y = torch.randn(4, 80, 500)
 y_lengths = torch.randint(300, 500, (4,))
 
-dur_loss, prior_loss, diff_los, attn = model(x, x_lengths, y, y_lengths)
+dur_loss, prior_loss, diff_loss, attn = model(x, x_lengths, y, y_lengths)
 # backpropagate the loss 
 
 # now synthesises
