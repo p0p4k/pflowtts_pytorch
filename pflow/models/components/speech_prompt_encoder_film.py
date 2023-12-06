@@ -543,8 +543,11 @@ class TextEncoder(nn.Module):
             final_dropout=False,
         )
 
-        self.film_scale = torch.nn.Conv1d(self.n_channels, self.n_channels, 1)
-        self.film_mean = torch.nn.Conv1d(self.n_channels, self.n_channels, 1)
+        # self.film_scale = torch.nn.Conv1d(self.n_channels, self.n_channels, 1)
+        # self.film_mean = torch.nn.Conv1d(self.n_channels, self.n_channels, 1)
+        
+        self.film_scale = torch.nn.Conv1d(self.n_channels, 1, 1)
+        self.film_mean = torch.nn.Conv1d(self.n_channels, 1, 1)
         
         self.proj_m = torch.nn.Conv1d(self.n_channels, self.n_feats, 1)
 

@@ -94,7 +94,7 @@ class TextMelDataModule(LightningDataModule):
             shuffle=True,
             collate_fn=TextMelBatchCollate(
                 self.hparams.n_spks, 
-                get_codes=True, 
+                get_codes=False, 
                 sample_rate=self.hparams.sample_rate
                 ),
         )
@@ -108,7 +108,7 @@ class TextMelDataModule(LightningDataModule):
             shuffle=False,
             collate_fn=TextMelBatchCollate(
                 self.hparams.n_spks, 
-                get_codes=True, 
+                get_codes=False, 
                 sample_rate=self.hparams.sample_rate
                 ),
         )
@@ -212,31 +212,13 @@ class TextMelDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.filepaths_and_text)
 
-# from audiolm_pytorch import EncodecWrapper
-# Descript-codec imports
-import dac
-from audiotools import AudioSignal
-import torchaudio
 
 class TextMelBatchCollate:
-    def __init__(self, n_spks, get_codes=True, sample_rate=22050):
+    def __init__(self, n_spks, get_codes=False, sample_rate=22050):
         self.n_spks = n_spks
         self.get_codes = get_codes
         #TODO model type as argument
-        if self.get_codes:
-            self.resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=24000)
-            self.model_path = dac.utils.download(model_type="24khz")
-            self.encodec = dac.DAC.load(self.model_path)
-        
-    def batched_encodec(self, wav):
-        with torch.no_grad():
-            self.encodec.eval()
-            wav = self.resampler(wav) # resample to 24khz
-            signal = AudioSignal(wav, 24000)
-            x = self.encodec.preprocess(signal.audio_data, signal.sample_rate)
-            _, _, latents, _, _ = self.encodec.encode(x)
-        return latents
-    
+
     def __call__(self, batch):
         B = len(batch)
         y_max_length = max([item["y"].shape[-1] for item in batch])
@@ -262,25 +244,10 @@ class TextMelBatchCollate:
             wav[i, :, : wav_.shape[-1]] = wav_
             spks.append(item["spk"])
         
-        if self.get_codes:
-            codes = self.batched_encodec(wav)
-            codes_lengths = []
-            for wav_len in wav_lengths:
-                if wav_len % 320 == 0:
-                    codes_lengths.append(wav_len // 320)
-                else:
-                    codes_lengths.append(1 + wav_len // 320)
-            ## if any codes mismatch issue, uncomment below
-            # codes_max_length = max(codes_lengths)
-            # codes_max_length = fix_len_compatibility(codes_max_length)
-            # codes = codes[:,:,:codes_max_length]
-            codes = codes.squeeze(0)
-        
         y_lengths = torch.tensor(y_lengths, dtype=torch.long)
         x_lengths = torch.tensor(x_lengths, dtype=torch.long)
         wav_lengths = torch.tensor(wav_lengths, dtype=torch.long)
         spks = torch.tensor(spks, dtype=torch.long) if self.n_spks > 1 else None
-        codes_lengths = torch.tensor(codes_lengths, dtype=torch.long) if self.get_codes else None
         return {
             "x": x, 
             "x_lengths": x_lengths, 
@@ -289,10 +256,6 @@ class TextMelBatchCollate:
             "spks": spks, 
             "wav":wav, 
             "wav_lengths":wav_lengths,
-            "codes":codes,
-            "codes_lengths":codes_lengths,
             "prompt_spec": y,
             "prompt_lengths": y_lengths,
-            "prompt_codes": codes,
-            "prompt_codes_lengths": codes_lengths,
             }

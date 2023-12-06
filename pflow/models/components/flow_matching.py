@@ -130,8 +130,8 @@ class CFM(BASECFM):
         )
 
         # Just change the architecture of the estimator here
-        self.estimator = Decoder(in_channels=in_channels*2, out_channels=out_channel, **decoder_params)
-        # self.estimator = DiffSingerNet(in_dims=in_channels, encoder_hidden=out_channel)
+        # self.estimator = Decoder(in_channels=in_channels*2, out_channels=out_channel, **decoder_params)
+        self.estimator = DiffSingerNet(in_dims=in_channels, encoder_hidden=out_channel)
         # self.estimator = VitsWNDecoder(
         #     in_channels=in_channels,
         #     out_channels=out_channel,
