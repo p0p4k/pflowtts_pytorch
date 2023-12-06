@@ -1,8 +1,8 @@
 ## P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting
-### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina,Mikyas Desta1, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
+### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina, Mikyas Desta, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
 #### Affiliations: NVIDIA
 
-## Status : Generated first sample (Check LJSpeech_Sample_100_epochs.wav) on 11/16/2023. 
+## Status : Added newer samples with better prosody and pronunciation. Check out `samples` folder. LJSpeech pretrained ckpt - [GDrive Link](https://drive.google.com/drive/folders/1x-A2Ezmmiz01YqittO_GLYhngJXazaF0?usp=sharing)
 
 Unofficial implementation of the paper [P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting](https://openreview.net/pdf?id=zNA7u7wtIN) by NVIDIA.
 
@@ -146,10 +146,22 @@ Let's assume we are training with LJ Speech
 
 2. Download the dataset from [here](https://keithito.com/LJ-Speech-Dataset/), extract it to `data/LJSpeech-1.1`, and prepare the file lists to point to the extracted data like for [item 5 in the setup of the NVIDIA Tacotron 2 repo](https://github.com/NVIDIA/tacotron2#setup).
 
-3. Go to `configs/data/ljspeech.yaml` and change
+3a. Go to `configs/data/ljspeech.yaml` and change
 ```yaml
 train_filelist_path: data/filelists/ljs_audio_text_train_filelist.txt
 valid_filelist_path: data/filelists/ljs_audio_text_val_filelist.txt
+```
+3b. Helper commands for the lazy 
+```sh
+!mkdir -p /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists
+!wget -O /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists/ljs_audio_text_test_filelist.txt https://raw.githubusercontent.com/NVIDIA/tacotron2/master/filelists/ljs_audio_text_test_filelist.txt
+!wget -O /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists/ljs_audio_text_train_filelist.txt https://raw.githubusercontent.com/NVIDIA/tacotron2/master/filelists/ljs_audio_text_train_filelist.txt
+!wget -O /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists/ljs_audio_text_val_filelist.txt https://raw.githubusercontent.com/NVIDIA/tacotron2/master/filelists/ljs_audio_text_val_filelist.txt
+
+!sed -i -- 's,DUMMY,/home/ubuntu/LJSpeech/LJSpeech-1.1/wavs,g' /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists/*.txt
+
+!sed -i -- 's,train_filelist_path: data/filelists/ljs_audio_text_train_filelist.txt,train_filelist_path: /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists/ljs_audio_text_train_filelist.txt,g' /home/ubuntu/LJSpeech/pflowtts_pytorch/configs/data/ljspeech.yaml
+!sed -i -- 's,valid_filelist_path: data/filelists/ljs_audio_text_val_filelist.txt,valid_filelist_path: /home/ubuntu/LJSpeech/LJSpeech-1.1/filelists/ljs_audio_text_val_filelist.txt,g' /home/ubuntu/LJSpeech/pflowtts_pytorch/configs/data/ljspeech.yaml
 ```
 4. Generate normalisation statistics with the yaml file of dataset configuration
 
@@ -172,12 +184,6 @@ to the paths of your train and validation filelists.
 5. Run the training script
 
 ```bash
-make train-ljspeech
-```
-
-or
-
-```bash
 python pflow/train.py experiment=ljspeech
 ```
 
@@ -194,6 +200,7 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
 - [x] Speech prompt input currently slices the input spectrogram and concatenates it with the text embedding. Can support external speech prompt input (during training as well)
 - [x] pflow prompt masking loss for training
 - [x] HiFiGan for vocoder
+- [x] Guidance for sampling
 
 ## TODOs, features and update notes
 - [x] (11/12/2023) Currently it is an experimental repo with many features substituted with quick architecture implementations I found online. I will add the original architectures soon.
@@ -219,4 +226,21 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - added sample audio
     - some architecture changes
     - we know the model learns, now we need to try multispeaker and check for prosody.
+- [x] (11/17/2023)
+    - added 3 new branches ->
+        - dev/stochastic -> some changes to posterior sampling and text encoder (prior) to make it stochastic
+        - dev/encodec -> predicts encodec continuous latent instead of mel spectrogram; if works, use encodec for decoding instead of hifi-gan
+        - exp/end2end -> end to end training of pflow with hi-fi gan to generate audio directly from text and speech prompt input; if it works, vits-tts will be obsolete.
+- [x] (11/17/2023)
+    - 24 epochs encodec sample (although robotic, it is a proof of concept) [encodec_poc.wav](encodec_poc.wav)
+- [x] (11/20/2023)
+    - Model is more or less ready.
+    - Added 3 choices for estimators, need to make them into hyperparameters and add them to the config file.
+    - Thanks to [@zidsi](https://github.com/zidsi) for pointing out typos in the code.
+- [x] (11/23/2023)
+    - Added newer samples with better prosody and pronunciation. Check out `samples` folder. (LJSpeech trained for 300k steps) _Paper recommends 800k steps._
+- [x] (12/02/2023)
+    - Added guidance for euler solver as recommended by the paper. Improves the quality of the audio drastically. Thanks to @robbit on discord for pointing this out.
+- [x] (12/03/2023)
+    - Added descript-codec branch for the curious. (not tested yet)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.

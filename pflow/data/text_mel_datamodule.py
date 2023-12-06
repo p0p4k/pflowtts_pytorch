@@ -92,11 +92,7 @@ class TextMelDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
-            collate_fn=TextMelBatchCollate(
-                self.hparams.n_spks, 
-                get_codes=False, 
-                sample_rate=self.hparams.sample_rate
-                ),
+            collate_fn=TextMelBatchCollate(self.hparams.n_spks),
         )
 
     def val_dataloader(self):
@@ -106,11 +102,7 @@ class TextMelDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
-            collate_fn=TextMelBatchCollate(
-                self.hparams.n_spks, 
-                get_codes=False, 
-                sample_rate=self.hparams.sample_rate
-                ),
+            collate_fn=TextMelBatchCollate(self.hparams.n_spks),
         )
 
     def teardown(self, stage: Optional[str] = None):
@@ -204,8 +196,12 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
-        if datapoint["wav"].shape[-1] < 66150:
-            # skip datapoint if too short (3s)
+        if datapoint["wav"].shape[1] <= 66150:
+            ''' 
+            skip datapoint if too short (3s) 
+            TODO To not waste data, we can concatenate wavs less than 3s and use them
+            TODO as a hyperparameter; multispeaker dataset can use another wav of same speaker
+            '''
             return self.__getitem__(random.randint(0, len(self.filepaths_and_text)-1))
         return datapoint
 
@@ -214,10 +210,8 @@ class TextMelDataset(torch.utils.data.Dataset):
 
 
 class TextMelBatchCollate:
-    def __init__(self, n_spks, get_codes=False, sample_rate=22050):
+    def __init__(self, n_spks):
         self.n_spks = n_spks
-        self.get_codes = get_codes
-        #TODO model type as argument
 
     def __call__(self, batch):
         B = len(batch)
@@ -243,11 +237,12 @@ class TextMelBatchCollate:
             x[i, : x_.shape[-1]] = x_
             wav[i, :, : wav_.shape[-1]] = wav_
             spks.append(item["spk"])
-        
+
         y_lengths = torch.tensor(y_lengths, dtype=torch.long)
         x_lengths = torch.tensor(x_lengths, dtype=torch.long)
         wav_lengths = torch.tensor(wav_lengths, dtype=torch.long)
         spks = torch.tensor(spks, dtype=torch.long) if self.n_spks > 1 else None
+        
         return {
             "x": x, 
             "x_lengths": x_lengths, 

@@ -220,7 +220,7 @@ class BaseLightningClass(LightningModule, ABC):
                 prompt_slice, ids_slice = commons.rand_slice_segments(
                         prompt, prompt_lengths, self.prompt_size
                     )
-                output = self.synthesise(x[:, :x_lengths], x_lengths, prompt=prompt_slice, n_timesteps=10)
+                output = self.synthesise(x[:, :x_lengths], x_lengths, prompt=prompt_slice, n_timesteps=10, guidance_scale=0.0)
                 y_enc, y_dec = output["encoder_outputs"], output["decoder_outputs"]
                 attn = output["attn"]
                 self.logger.experiment.add_image(
