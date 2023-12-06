@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 from pflow.models.pflow_tts import pflowTTS
 import torch
 from dataclasses import dataclass
