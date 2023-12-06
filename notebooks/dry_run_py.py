@@ -1,8 +1,4 @@
-import sys
-sys.path.append('..')
-
 from pflow.models.pflow_tts import pflowTTS
-
 import torch
 from dataclasses import dataclass
 
@@ -71,11 +67,31 @@ encoder_overall_params = EncoderOverallParams(
     duration_predictor_params=duration_predictor_params
 )
 
+@dataclass
+class DecoderParams:
+    channels: tuple
+    dropout: float
+    attention_head_dim: int
+    n_blocks: int
+    num_mid_blocks: int
+    num_heads: int
+    act_fn: str
+
+decoder_params = DecoderParams(
+    channels=(256, 256),
+    dropout=0.05,
+    attention_head_dim=64,
+    n_blocks=1,
+    num_mid_blocks=2,
+    num_heads=2,
+    act_fn='snakebeta',
+)
+    
 model = pflowTTS(
     n_vocab=100,
     n_feats=80,
     encoder=encoder_overall_params,
-    decoder=None,
+    decoder=decoder_params.__dict__,
     cfm=cfm_params,
     data_statistics=None,
 )
