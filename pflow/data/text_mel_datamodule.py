@@ -205,6 +205,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         return len(self.filepaths_and_text)
 
 from audiolm_pytorch import EncodecWrapper
+from einops import rearrange
 class TextMelBatchCollate:
     def __init__(self, n_spks, get_codes=True):
         self.n_spks = n_spks
@@ -215,7 +216,9 @@ class TextMelBatchCollate:
     def batched_encodec(self, wav):
         with torch.no_grad():
             self.encodec.eval()
-            prompts, _, _ = self.encodec(wav, curtail_from_left = True, return_encoded = True)
+            prompts = self.codec.model.encoder(rearrange(wav, f'b t -> b {self.codec.model.channels} t'))
+            # prompts, _, _ = self.encodec(wav, curtail_from_left = True, return_encoded = True)
+            # prompts = prompts.transpose(1,2)
         return prompts
     
     def __call__(self, batch):
@@ -246,7 +249,7 @@ class TextMelBatchCollate:
         if self.get_codes:
             codes = self.batched_encodec(wav)
             codes_lengths = [1 + wav_len // 320 for wav_len in wav_lengths]
-            codes = codes.squeeze(0).transpose(1,2)
+            codes = codes.squeeze(0)
         
         y_lengths = torch.tensor(y_lengths, dtype=torch.long)
         x_lengths = torch.tensor(x_lengths, dtype=torch.long)
