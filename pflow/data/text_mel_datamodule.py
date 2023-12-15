@@ -173,6 +173,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             while audio.shape[1] < self.sample_rate * 5:
                 audio = torch.cat((audio, torch.zeros((1, self.sample_rate//4))), dim=1)
                 audio = torch.cat((audio, audio), dim=1)
+                text = torch.cat((text, text), dim=0)
         mel = mel_spectrogram(
             audio,
             self.n_fft,
@@ -185,7 +186,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             center=False,
         ).squeeze()
         mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
-
+         
         # TODO: make dictionary to get different spec for same speaker
         # right now naively repeating target mel for testing purposes
         return {"x": text, "y": mel, "spk": spk, "wav":audio}
