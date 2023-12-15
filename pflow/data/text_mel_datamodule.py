@@ -166,6 +166,26 @@ class TextMelDataset(torch.utils.data.Dataset):
 
         text = self.get_text(text, add_blank=self.add_blank)
         mel, audio = self.get_mel(filepath)
+        if audio.shape[1] < self.sample_rate * 3:
+            ''' 
+            add 0.25 seconds silence to end of audio and concatenate with itself to make it at least 5s long
+            '''
+            while audio.shape[1] < self.sample_rate * 5:
+                audio = torch.cat((audio, torch.zeros((1, self.sample_rate//4))), dim=1)
+                audio = torch.cat((audio, audio), dim=1)
+        mel = mel_spectrogram(
+            audio,
+            self.n_fft,
+            self.n_mels,
+            self.sample_rate,
+            self.hop_length,
+            self.win_length,
+            self.f_min,
+            self.f_max,
+            center=False,
+        ).squeeze()
+        mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
+
         # TODO: make dictionary to get different spec for same speaker
         # right now naively repeating target mel for testing purposes
         return {"x": text, "y": mel, "spk": spk, "wav":audio}
@@ -196,7 +216,7 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
-        if datapoint["wav"].shape[1] <= 66150:
+        if datapoint["wav"].shape[1] <= self.sample_rate * 3:
             ''' 
             skip datapoint if too short (3s) 
             TODO To not waste data, we can concatenate wavs less than 3s and use them
