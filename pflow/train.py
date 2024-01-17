@@ -8,6 +8,7 @@ import rootutils
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
+import torch
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -63,6 +64,17 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")  # pylint: disable=protected-access
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
 
+    log.info("Instantiating transfer learning...")
+    if cfg.get("transfer_ckpt_path") is not None:
+        assert cfg.get("ckpt_path") == None, "Cannot resume from checkpoint and transfer learn at the same time!"
+        model_state_dict = model.state_dict()
+        state_dict = torch.load(cfg.get("transfer_ckpt_path"), map_location="cpu")['state_dict']
+        for k, v in model_state_dict.items():
+            if k in state_dict and state_dict[k].size() == v.size():
+                state_dict[k] = v
+        model.load_state_dict(state_dict, strict=False)        
+        log.info(f"Loaded model from {cfg.get('transfer_ckpt_path')}")
+
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
@@ -78,7 +90,11 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+        if cfg.get("ckpt_path") is not None:
+            log.info(f"Resuming from checkpoint: {cfg.get('ckpt_path')}")
+            trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+        else:
+            trainer.fit(model=model, datamodule=datamodule)
 
     train_metrics = trainer.callback_metrics
 

@@ -31,6 +31,7 @@ class pflowTTS(BaseLightningClass):  #
         cfm,
         data_statistics,
         prompt_size=264,
+        dur_p_use_log=False,
         optimizer=None,
         scheduler=None,
         **kwargs,
@@ -42,6 +43,7 @@ class pflowTTS(BaseLightningClass):  #
         self.n_vocab = n_vocab
         self.n_feats = n_feats
         self.prompt_size = prompt_size
+        self.dur_p_use_log = dur_p_use_log
         speech_in_channels = n_feats
 
         self.encoder = TextEncoder(
@@ -151,7 +153,7 @@ class pflowTTS(BaseLightningClass):  #
             )
 
         logw_ = torch.log(1e-8 + attn.sum(2)) * x_mask
-        dur_loss = duration_loss(logw, logw_, x_lengths)
+        dur_loss = duration_loss(logw, logw_, x_lengths, use_log=self.dur_p_use_log)
 
         # aln_hard, aln_soft, aln_log, aln_mask = self.aligner(
         #     mu_x.transpose(1,2), x_mask, y, y_mask

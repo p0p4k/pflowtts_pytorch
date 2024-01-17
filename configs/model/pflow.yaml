@@ -12,3 +12,5 @@ spk_emb_dim: 64
 n_feats: 80
 data_statistics: ${data.data_statistics}
 out_size: null # Must be divisible by 4
+prompt_size: 264 #number of mel frames (3s at 22050 SR; 3*22050//256)
+dur_p_use_log: False

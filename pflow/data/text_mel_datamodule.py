@@ -39,6 +39,7 @@ class TextMelDataModule(LightningDataModule):
         f_max,
         data_statistics,
         seed,
+        min_sample_size,
     ):
         super().__init__()
 
@@ -68,6 +69,7 @@ class TextMelDataModule(LightningDataModule):
             self.hparams.f_max,
             self.hparams.data_statistics,
             self.hparams.seed,
+            self.hparams.min_sample_size,
         )
         self.validset = TextMelDataset(  # pylint: disable=attribute-defined-outside-init
             self.hparams.valid_filelist_path,
@@ -83,6 +85,7 @@ class TextMelDataModule(LightningDataModule):
             self.hparams.f_max,
             self.hparams.data_statistics,
             self.hparams.seed,
+            self.hparams.min_sample_size,
         )
 
     def train_dataloader(self):
@@ -134,6 +137,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         f_max=8000,
         data_parameters=None,
         seed=None,
+        min_sample_size=4,
     ):
         self.filepaths_and_text = parse_filelist(filelist_path)
         self.n_spks = n_spks
@@ -146,6 +150,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         self.win_length = win_length
         self.f_min = f_min
         self.f_max = f_max
+        self.min_sample_size = min_sample_size
         if data_parameters is not None:
             self.data_parameters = data_parameters
         else:
@@ -196,9 +201,9 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
-        if datapoint["wav"].shape[1] <= 66150:
+        if datapoint["wav"].shape[1] <= self.min_sample_size * self.sample_rate:
             ''' 
-            skip datapoint if too short (3s) 
+            skip datapoint if too short (<4s , prompt is 3s)
             TODO To not waste data, we can concatenate wavs less than 3s and use them
             TODO as a hyperparameter; multispeaker dataset can use another wav of same speaker
             '''

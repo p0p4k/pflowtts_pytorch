@@ -258,4 +258,9 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - Added guidance for euler solver as recommended by the paper. Improves the quality of the audio drastically. Thanks to @robbit on discord for pointing this out.
 - [x] (12/03/2023)
     - Added descript-codec branch for the curious. (not tested yet)
+- [x] (01/17/2024)
+    - Added minimum wav sample size (in seconds) parameter in the configs (data/[dataset].yaml), `min_sample_size` (default is 4s; so that prompt is at least 3s and prediction is at least 1s)
+    - Added `prompt_size` in the configs (models/pflow.yaml) to control the size of the prompt. It is number of mel frames to be used as prompt from the wav sample at traning. (default is ~3s; 3*22050//256 = 258; rounded to 264 in configs) 
+    - Added `dur_p_use_log` in the configs (models/pflow.yaml) to control whether to use log of duration prediction or not for loss calculation. (default is False now) My hypothesis is that log durations mse loss doesn't work well for longer pauses etc (due to nature of log function). So, we just `e` power the log durations before calculating the loss. Alternative way can be using relu instead of log.
+    - Added `transfer_ckpt_path` in the configs (train.yaml) to control the path of the ckpt to be used for transfer learning. (default is None) If None, then the model is trained from scratch. If not None, then the model is loaded from the ckpt path and trained from step 0. In case, `ckpt_path` is also not None, then the model is loaded from `ckpt_path` and trained from the step it was saved at. `transfer_ckpt_path` can handle layer size mismatches between the ckpt and the model.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.

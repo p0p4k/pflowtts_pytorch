@@ -41,8 +41,11 @@ def generate_path(duration, mask):
     return path
 
 
-def duration_loss(logw, logw_, lengths):
-    loss = torch.sum((logw - logw_) ** 2) / torch.sum(lengths)
+def duration_loss(logw, logw_, lengths, use_log=False):
+    if use_log:
+        loss = torch.sum((logw - logw_) ** 2) / torch.sum(lengths)
+    else:
+        loss = torch.sum((torch.exp(logw) - torch.exp(logw_)) ** 2) / torch.sum(lengths)
     return loss
 
 
