@@ -264,5 +264,7 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - Added `dur_p_use_log` in the configs (models/pflow.yaml) to control whether to use log of duration prediction or not for loss calculation. (default is False now) My hypothesis is that log durations mse loss doesn't work well for longer pauses etc (due to nature of log function). So, we just `e` power the log durations before calculating the loss. Alternative way can be using relu instead of log.
     - Added `transfer_ckpt_path` in the configs (train.yaml) to control the path of the ckpt to be used for transfer learning. (default is None) If None, then the model is trained from scratch. If not None, then the model is loaded from the ckpt path and trained from step 0. In case, `ckpt_path` is also not None, then the model is loaded from `ckpt_path` and trained from the step it was saved at. `transfer_ckpt_path` can handle layer size mismatches between the ckpt and the model.
 - [x] (01/28/2024)
-    - Added ONNX export support based on Matcha-TTS repo. (not tested yet, will test soon) {draft} 
+    - Added ONNX export support based on Matcha-TTS repo. (not tested yet, will test soon) {draft}
+- [x] (01/30/2024)
+    - ONNX tested and works well. Use the arguments in `export.py` and `inference.py` to export and test the model. (the arguemnts are self-explanatory)
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
