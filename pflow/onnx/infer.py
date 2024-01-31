@@ -96,6 +96,9 @@ def main():
     parser.add_argument("--vocoder", type=str, default=None, help="Vocoder to use (defaults to None)")
     parser.add_argument("--text", type=str, default=None, help="Text to synthesize")
     parser.add_argument("--file", type=str, default=None, help="Text file to synthesize")
+    
+    parser.add_argument("--prompt", type=str, default=None, help="Prompt wav file to use")
+    
     parser.add_argument(
         "--temperature",
         type=float,
