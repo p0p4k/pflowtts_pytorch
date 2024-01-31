@@ -161,7 +161,7 @@ def main():
     inputs = {
         "x": x,
         "x_lengths": x_lengths,
-        "prompt": prompt,
+        "prompt": np.array(prompt, dtype=np.float32),
         "scales": np.array([args.temperature, args.speaking_rate], dtype=np.float32),
     }
     
