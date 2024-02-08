@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../..')
+
 import argparse
 import random
 from pathlib import Path
@@ -100,11 +103,12 @@ def main():
     parser = argparse.ArgumentParser(description="Export pflow-TTS to ONNX")
 
     parser.add_argument(
-        "checkpoint_path",
+        "--checkpoint_path",
         type=str,
         help="Path to the model checkpoint",
     )
-    parser.add_argument("output", type=str, help="Path to output `.onnx` file")
+    parser.add_argument("--output", type=str, help="Path to output `.onnx` file")
+    
     parser.add_argument(
         "--n-timesteps", type=int, default=5, help="Number of steps to use for reverse diffusion in decoder (default 5)"
     )

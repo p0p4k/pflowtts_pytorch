@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../..')
+
 import argparse
 import os
 import warnings
@@ -16,7 +19,7 @@ from pflow.data.text_mel_datamodule import mel_spectrogram
 def validate_args(args):
     assert (
         args.text or args.file
-    ), "Either text or file must be provided pflowTTS need sometext to whisk the waveforms."
+    ), "Either text or file must be provided pflowTTS need some text to generate the waveforms."
     assert args.prompt, "Prompt wav must be provided"
     assert args.temperature >= 0, "Sampling temperature cannot be negative"
     assert args.speaking_rate >= 0, "Speaking rate must be greater than 0"
@@ -31,7 +34,7 @@ def write_wavs(model, inputs, output_dir, external_vocoder=None):
         infer_secs = perf_counter() - t0
         mel_infer_secs = vocoder_infer_secs = None
     else:
-        print("Generating mel using Matcha")
+        print("Generating mel using pflowTTS")
         mel_t0 = perf_counter()
         mels, mel_lengths = model.run(None, inputs)
         mel_infer_secs = perf_counter() - mel_t0
@@ -58,7 +61,7 @@ def write_wavs(model, inputs, output_dir, external_vocoder=None):
     rtf = infer_secs / wav_secs
     if mel_infer_secs is not None:
         mel_rtf = mel_infer_secs / wav_secs
-        print(f"Matcha RTF: {mel_rtf}")
+        print(f"pflowTTS RTF: {mel_rtf}")
     if vocoder_infer_secs is not None:
         vocoder_rtf = vocoder_infer_secs / wav_secs
         print(f"Vocoder RTF: {vocoder_rtf}")
@@ -89,7 +92,7 @@ def main():
         description="pflowTTS inference script"
     )
     parser.add_argument(
-        "model",
+        "--model",
         type=str,
         help="ONNX model to use",
     )
