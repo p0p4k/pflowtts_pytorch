@@ -18,6 +18,7 @@ from pflow.utils.model import (
 )
 from pflow.models.components import commons
 from pflow.models.components.aligner import Aligner, ForwardSumLoss, BinLoss
+from pflow.utils.monotonic_align import maximum_path
 
 log = utils.get_pylogger(__name__)
 
@@ -147,7 +148,6 @@ class pflowTTS(BaseLightningClass):  #
             neg_cent = neg_cent1 + neg_cent2 + neg_cent3 + neg_cent4
             
             attn_mask = torch.unsqueeze(x_mask, 2) * torch.unsqueeze(y_mask, -1)
-            from pflow.utils.monotonic_align import maximum_path
             attn = (
                 maximum_path(neg_cent, attn_mask.squeeze(1)).unsqueeze(1).detach()
             )
