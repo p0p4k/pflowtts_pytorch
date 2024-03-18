@@ -267,4 +267,6 @@ python pflow/train.py experiment=ljspeech trainer.devices=[0,1]
     - Added ONNX export support based on Matcha-TTS repo. (not tested yet, will test soon) {draft}
 - [x] (01/30/2024)
     - ONNX tested and works well. Use the arguments in `export.py` and `inference.py` to export and test the model. (the arguemnts are self-explanatory)
+- [x] (03/18/2024)
+    - added pos embeddings in speech text encoder.
 - [x] Anyone is welcome to contribute to this repo. Please feel free to open an issue or a PR.
