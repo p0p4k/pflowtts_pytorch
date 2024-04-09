@@ -38,7 +38,7 @@ class PflowWithVocoder(LightningModule):
 
 def get_exportable_module(pflow, vocoder, n_timesteps):
     """
-    Return an appropriate `LighteningModule` and output-node names
+    Return an appropriate `LightningModule` and output-node names
     based on whether the vocoder is embedded in  the final graph
     """
 
