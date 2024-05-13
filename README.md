@@ -13,6 +13,7 @@ While recent large-scale neural codec language models have shown significant imp
 ## Credits
 - Of course the kind author of the paper for taking some time to explain me some details of the paper that I didn't understand at first. 
 - We will build this repo based on the [VITS2 repo](https://github.com/p0p4k/vits2_pytorch), [MATCHA-TTS repo](https://github.com/shivammehta25/Matcha-TTS/) and [VoiceFlow-TTS repo](https://github.com/cantabile-kwok/VoiceFlow-TTS)
+- Folks at LMNT-com. Try out their ultrafast, realistic TTS models at [lmnt-com](https://app.lmnt.com/). If you like what we're building here, [come join us at LMNT](https://explore.lmnt.com).
 
 # Dry run
 ``` sh
