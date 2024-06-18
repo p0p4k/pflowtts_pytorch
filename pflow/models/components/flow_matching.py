@@ -55,6 +55,8 @@ class BASECFM(torch.nn.Module, ABC):
             return self.solve_euler(z, t_span=t_span, mu=mu, mask=mask, cond=cond, training=training, guidance_scale=guidance_scale)
         elif self.solver == "heun":
             return self.solve_heun(z, t_span=t_span, mu=mu, mask=mask, cond=cond, training=training, guidance_scale=guidance_scale)
+        elif self.solver == "midpoint":
+            return self.solve_midpoint(z, t_span=t_span, mu=mu, mask=mask, cond=cond, training=training, guidance_scale=guidance_scale)
 
     def solve_euler(self, x, t_span, mu, mask,  cond, training=False, guidance_scale=0.0):
         """
@@ -76,13 +78,6 @@ class BASECFM(torch.nn.Module, ABC):
         sol = []
         steps = 1
         while steps <= len(t_span) - 1:
-            """
-            dphi_dt = self.estimator(x, mask, mu, t, cond, training=training)
-            if guidance_scale > 0.0:
-                mu_avg = mu.mean(2, keepdims=True).expand_as(mu)
-                dphi_avg = self.estimator(x, mask, mu_avg, t, cond, training=training)
-                dphi_dt = dphi_dt + guidance_scale * (dphi_dt - dphi_avg)
-            """
             dphi_dt = self.func_dphi_dt(x, mask, mu, t, cond, training=training, guidance_scale=guidance_scale)
             x = x + dt * dphi_dt
             t = t + dt
@@ -121,6 +116,43 @@ class BASECFM(torch.nn.Module, ABC):
             
             #- Heun's -> Y'n+1' = Y'n' + h * 0.5( F(X'n', Y'n') + F(X'n' + h, Y'n' + h * F(X'n', Y'n') ) )
             x = x + dt * 0.5 * (dphi_dt + dphi_dt_2)
+            t = t + dt
+
+            sol.append(x)
+            if steps < len(t_span) - 1:
+                dt = t_span[steps + 1] - t
+            steps += 1
+
+        return sol[-1]
+
+    def solve_midpoint(self, x, t_span, mu, mask, cond, training=False, guidance_scale=0.0):
+        """
+        Fixed midpoint solver for ODEs.
+        Args:
+            x (torch.Tensor): random noise
+            t_span (torch.Tensor): n_timesteps interpolated
+                shape: (n_timesteps + 1,)
+            mu (torch.Tensor): output of encoder
+                shape: (batch_size, n_feats, mel_timesteps)
+            mask (torch.Tensor): output_mask
+                shape: (batch_size, 1, mel_timesteps)
+            cond: Not used but kept for future purposes
+        """
+        t, _, dt = t_span[0], t_span[-1], t_span[1] - t_span[0]
+
+        # -! : reserved space for debugger
+        sol = []
+        steps = 1
+
+        while steps <= len(t_span) - 1:
+            dphi_dt = self.func_dphi_dt(x, mask, mu, t, cond, training=training, guidance_scale=guidance_scale)
+            dphi_dt_2 = self.func_dphi_dt(x + dt * 0.5 * dphi_dt, mask, mu, t + dt * 0.5, cond, training=training, guidance_scale=guidance_scale)
+            
+            # - Euler's -> Y'n+1' = Y'n' + h * F(X'n', Y'n')
+            # x = x + dt * dphi_dt
+            
+            #- midpoint -> Y'n+1' = Y'n' + h * F(X'n' + 0.5 * h, Y'n' + 0.5 * h * F(X'n', Y'n') )
+            x = x + dt * dphi_dt_2
             t = t + dt
 
             sol.append(x)
