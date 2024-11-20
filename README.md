@@ -2,7 +2,7 @@
 ### Authors : Sungwon Kim, Kevin J Shih, Rohan Badlani, Joao Felipe Santos, Evelina Bhakturina, Mikyas Desta, Rafael Valle, Sungroh Yoon, Bryan Catanzaro
 #### Affiliations: NVIDIA
 
-## Status : Added newer samples with better prosody and pronunciation. Check out `samples` folder. LJSpeech pretrained ckpt - [GDrive Link](https://drive.google.com/drive/folders/1x-A2Ezmmiz01YqittO_GLYhngJXazaF0?usp=sharing)
+## Status : Added newer samples with better prosody and pronunciation. Check out `samples` folder. LJSpeech pretrained ckpt - [GDrive Link](https://drive.google.com/drive/folders/1x-A2Ezmmiz01YqittO_GLYhngJXazaF0?usp=sharing) Multispeaker VCTK pretrained ckpt (1100 epoch on VCTK) - [Huggingface](https://huggingface.co/datasets/isjwdu/DFADD/blob/main/pflowtts_checkpoint_epoch%3D1099.ckpt)
 
 Unofficial implementation of the paper [P-Flow: A Fast and Data-Efficient Zero-Shot TTS through Speech Prompting](https://openreview.net/pdf?id=zNA7u7wtIN) by NVIDIA.
 
